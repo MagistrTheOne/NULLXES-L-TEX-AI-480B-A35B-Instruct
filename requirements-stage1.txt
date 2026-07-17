@@ -1,17 +1,23 @@
 # NULLXES-LÆTEX Stage1 Weight Genesis + later training stack
 # Do NOT install for Gate0-only work. Use after tokenizer Gate0.
-# pip install -r requirements-stage1.txt
+#
+# CRITICAL — Torch / CUDA on RunPod H200 (driver ~12.8):
+#   NEVER `pip install torch` from default PyPI (pulls CUDA 13 / breaks driver).
+#   Restore / pin cu124 first, THEN install this file:
+#
+#   pip uninstall -y torch torchvision torchaudio
+#   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
+#     --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements-stage1.txt
+#
+# Or keep the image-bundled torch (2.4.1+cu124) and only install this file
+# (torch lines are intentionally omitted).
 
 -r requirements-gate0.txt
 
-# Core
-torch>=2.7.0
-torchvision
-torchaudio
-
 # Config
 omegaconf>=2.3.0
-protobuf>=5.27.0
+protobuf>=5.27.0,<7
 
 # Numerical
 scipy>=1.13.0
@@ -34,6 +40,7 @@ packaging
 einops>=0.8.0
 
 # Validation / checkpoints / HF
+# Pin <5 until Latex* APIs are verified on transformers 5.x
 pytest>=8.0.0
 safetensors>=0.4.0
-transformers>=4.46.0
+transformers>=4.46.0,<5.0.0

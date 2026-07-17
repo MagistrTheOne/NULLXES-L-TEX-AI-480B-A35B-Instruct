@@ -65,6 +65,19 @@ def main() -> int:
         "float16": torch.float16,
     }[args.dtype]
     device = torch.device(args.device)
+    if device.type == "cuda":
+        if not torch.cuda.is_available():
+            print(
+                "[fail] CUDA requested but torch.cuda.is_available() is False.\n"
+                "  Likely: pip replaced image torch with CUDA-13 wheels.\n"
+                "  Fix:\n"
+                "    pip uninstall -y torch torchvision torchaudio\n"
+                "    pip install -r requirements-torch-cu124.txt "
+                "--index-url https://download.pytorch.org/whl/cu124\n",
+                file=sys.stderr,
+            )
+            return 2
+        print(f"[cuda] {torch.cuda.get_device_name(0)} | torch {torch.__version__}")
 
     model = LatexForCausalLM(config)
     model = model.to(device=device, dtype=dtype)
