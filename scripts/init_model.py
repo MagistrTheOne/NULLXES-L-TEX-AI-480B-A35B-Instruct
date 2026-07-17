@@ -2,13 +2,15 @@
 """
 NULLXES-LÆTEX Weight Genesis — Transformers-compatible Causal LM.
 
-Creates LatexForCausalLM (not an island nn.Module), applies muP init,
-writes HF checkpoint via save_pretrained().
+Creates LatexForCausalLM, applies muP init, writes HF checkpoint.
 
-  python scripts/init_model.py --config configs/nullxes_latex_7b.yaml
+  # Recommended on H200 (fast save — no GPU↔CPU stall):
+  python scripts/init_model.py --config configs/nullxes_latex_7b.yaml \\
+      --dtype bfloat16 --smoke-device cuda
 
-Requires: pip install -r requirements-stage1.txt
-Does NOT train.
+Checkpoint (canonical): checkpoints/nullxes-latex-7b
+
+Requires Stage1 + cu124 torch. Does NOT train.
 """
 
 from __future__ import annotations
@@ -22,13 +24,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+# Single source of truth — keep in sync with configs/nullxes_latex_7b.yaml
+DEFAULT_CKPT = "checkpoints/nullxes-latex-7b"
+
+
+def _log(msg: str) -> None:
+    print(msg, flush=True)
+
 
 def main() -> int:
     p = argparse.ArgumentParser(description="NULLXES-LÆTEX Weight Genesis (HF CausalLM)")
     p.add_argument("--config", default="configs/nullxes_latex_7b.yaml")
-    p.add_argument("--device", default="cpu", help="cpu | cuda")
-    p.add_argument("--dtype", default="float32", choices=["float32", "bfloat16", "float16"])
+    p.add_argument(
+        "--dtype",
+        default="bfloat16",
+        choices=["float32", "bfloat16", "float16"],
+        help="Parameter dtype for checkpoint (default: bfloat16)",
+    )
+    p.add_argument(
+        "--smoke-device",
+        default="cpu",
+        help="cpu | cuda — only forward smoke; weights always saved from CPU",
+    )
+    # Back-compat: --device maps to smoke-device
+    p.add_argument("--device", default=None, help=argparse.SUPPRESS)
     args = p.parse_args()
+    if args.device is not None:
+        args.smoke_device = args.device
 
     try:
         import torch
@@ -36,7 +58,10 @@ def main() -> int:
         from transformers import GenerationConfig
     except ImportError as e:
         print(
-            "Missing Stage1 deps.\n  pip install -r requirements-stage1.txt\n",
+            "Missing Stage1 deps.\n"
+            "  pip install -r requirements-torch-cu124.txt "
+            "--index-url https://download.pytorch.org/whl/cu124\n"
+            "  pip install -r requirements-stage1.txt\n",
             file=sys.stderr,
         )
         raise SystemExit(2) from e
@@ -56,7 +81,7 @@ def main() -> int:
     init_cfg = full.get("init") or {}
     tok_cfg = full.get("tokenizer") or {}
     ckpt_cfg = full.get("checkpoint") or {}
-    out_dir = ROOT / ckpt_cfg.get("output_dir", "checkpoints/nullxes-latex-7b")
+    out_dir = ROOT / ckpt_cfg.get("output_dir", DEFAULT_CKPT)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     dtype = {
@@ -64,26 +89,28 @@ def main() -> int:
         "bfloat16": torch.bfloat16,
         "float16": torch.float16,
     }[args.dtype]
-    device = torch.device(args.device)
-    if device.type == "cuda":
+    smoke_device = torch.device(args.smoke_device)
+
+    if smoke_device.type == "cuda":
         if not torch.cuda.is_available():
             print(
-                "[fail] CUDA requested but torch.cuda.is_available() is False.\n"
-                "  Likely: pip replaced image torch with CUDA-13 wheels.\n"
-                "  Fix:\n"
-                "    pip uninstall -y torch torchvision torchaudio\n"
-                "    pip install -r requirements-torch-cu124.txt "
+                "[fail] CUDA smoke requested but torch.cuda.is_available() is False.\n"
+                "  pip uninstall -y torch torchvision torchaudio\n"
+                "  pip install -r requirements-torch-cu124.txt "
                 "--index-url https://download.pytorch.org/whl/cu124\n",
                 file=sys.stderr,
             )
             return 2
-        print(f"[cuda] {torch.cuda.get_device_name(0)} | torch {torch.__version__}")
+        _log(f"[cuda] {torch.cuda.get_device_name(0)} | torch {torch.__version__}")
 
+    # Build + init on CPU so save_pretrained does not stall on GPU→CPU copies.
+    _log("[1/5] construct LatexForCausalLM on CPU …")
     model = LatexForCausalLM(config)
-    model = model.to(device=device, dtype=dtype)
+    _log(f"[2/5] cast to {args.dtype} on CPU …")
+    model = model.to(device="cpu", dtype=dtype)
+    _log("[3/5] apply muP init …")
     mup_meta = apply_mup_init(model, init_cfg)
 
-    # Diagnostics
     nan_detected = False
     weight_stds = []
     dead = 0
@@ -98,10 +125,14 @@ def main() -> int:
                     dead += 1
     mean_std = sum(weight_stds) / max(len(weight_stds), 1)
     n_params = sum(p.numel() for p in model.parameters())
+    _log(f"    params={n_params / 1e9:.3f}B mean_std={mean_std:.6f}")
 
     smoke_ok, smoke_err = True, None
+    _log(f"[4/5] forward smoke on {smoke_device} …")
     try:
-        ids = torch.randint(0, min(1024, config.vocab_size), (1, 8), device=device)
+        if smoke_device.type == "cuda":
+            model = model.to(smoke_device)
+        ids = torch.randint(0, min(1024, config.vocab_size), (1, 8), device=smoke_device)
         out = model(input_ids=ids, labels=ids)
         if out.logits is None or not torch.isfinite(out.logits).all():
             smoke_ok, smoke_err = False, "non-finite logits"
@@ -109,9 +140,15 @@ def main() -> int:
             smoke_ok, smoke_err = False, "non-finite loss"
     except Exception as e:  # noqa: BLE001
         smoke_ok, smoke_err = False, str(e)
+    finally:
+        if next(model.parameters()).device.type == "cuda":
+            _log("    moving weights back to CPU for save …")
+            model = model.cpu()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-    # HF save_pretrained
-    model.save_pretrained(out_dir, safe_serialization=True)
+    _log(f"[5/5] save_pretrained → {out_dir.relative_to(ROOT)} (CPU, sharded) …")
+    model.save_pretrained(out_dir, safe_serialization=True, max_shard_size="2GB")
     config.save_pretrained(out_dir)
 
     gen_cfg = GenerationConfig(
@@ -121,7 +158,6 @@ def main() -> int:
     )
     gen_cfg.save_pretrained(out_dir)
 
-    # Tokenizer bind
     specials = ROOT / tok_cfg.get(
         "special_tokens_file", "tokenizer/latex-v0.1/special_tokens.json"
     )
@@ -153,7 +189,8 @@ def main() -> int:
         "smoke_error": smoke_err,
         "mup": mup_meta,
         "dtype": args.dtype,
-        "device": args.device,
+        "smoke_device": args.smoke_device,
+        "save_device": "cpu",
         "config_source": str(cfg_path),
         "checkpoint_dir": str(out_dir.relative_to(ROOT)),
         "save_pretrained": True,
@@ -162,9 +199,9 @@ def main() -> int:
     (out_dir / "init_report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
-    print(json.dumps(report, indent=2))
-    print(f"[Weight Genesis] HF checkpoint → {out_dir}")
-    print("Load test: AutoModelForCausalLM.from_pretrained(path) after `import latex`")
+    _log(json.dumps(report, indent=2))
+    _log(f"[Weight Genesis] HF checkpoint → {out_dir}")
+    _log(f"Next: python scripts/smoke_hf_causal.py --checkpoint {out_dir.relative_to(ROOT)}")
     return 0 if report["passed"] else 1
 
 
