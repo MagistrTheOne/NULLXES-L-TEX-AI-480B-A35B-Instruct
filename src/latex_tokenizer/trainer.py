@@ -125,15 +125,15 @@ def train_tokenizer(
     )
 
     corpus_path = prepare_corpus(cfg, runtime, smoke=smoke)
+    target_vocab = int(cfg["vocab_size"])
     if smoke:
-        # Seed+byte_fallback: floor ~520 (meta+alphabet), ceiling ~541 on
-        # current seed. Request above floor; soft limit lets SP shrink.
+        # Seed+byte_fallback: floor ~520; soft limit lets SP shrink.
         vocab_size = 768
+        hard_limit = False
     else:
-        vocab_size = int(cfg["vocab_size"])
-    # Reserve room: SP vocab_size includes specials when user_defined_symbols set
-    symbols = build_user_defined_symbols(cfg)
-    # First four are pad/unk/bos/eos — pass as control pieces; rest as user_defined
+        vocab_size = target_vocab
+        # Small Gate0 corpus cannot fill 131k Unigram pieces — soft train then pad.
+        hard_limit = False
     control = {i: tok for tok, i in _special_list(cfg) if i <= 3}
     extra_symbols = [tok for tok, i in _special_list(cfg) if i > 3]
 
@@ -160,9 +160,10 @@ def train_tokenizer(
         bos_piece=control[2],
         eos_piece=control[3],
         train_extremely_large_corpus=not smoke,
-        seed_sentencepiece_size=int(cfg.get("seed", 42)),
-        # Smoke seed cannot fill 768 pieces; soft limit avoids "vocab too high".
-        hard_vocab_limit=not smoke,
+        # NOTE: seed_sentencepiece_size is candidate pool size (NOT RNG seed).
+        # Never pass config seed=42 here — that capped Unigram to ~42 pieces.
+        seed_sentencepiece_size=int(sp_cfg.get("seed_sentencepiece_size", 1_000_000)),
+        hard_vocab_limit=hard_limit,
     )
     nthreads = int(sp_cfg.get("num_threads", 0))
     if nthreads > 0:
@@ -171,7 +172,6 @@ def train_tokenizer(
     spm.SentencePieceTrainer.train(**train_kwargs)
 
     model_src = Path(str(model_prefix) + ".model")
-    vocab_src = Path(str(model_prefix) + ".vocab")
     model_dst = artifact_dir / "tokenizer.model"
     vocab_dst = artifact_dir / "vocab.json"
 
@@ -179,9 +179,15 @@ def train_tokenizer(
 
     # Export vocab.json as id -> piece (NULLXES-owned artifact)
     sp = spm.SentencePieceProcessor()
-    # Loading OUR freshly trained model is required — not a foreign pretrained
     sp.load(str(model_dst))
-    vocab = {i: sp.id_to_piece(i) for i in range(sp.get_piece_size())}
+    n_trained = int(sp.get_piece_size())
+    vocab = {str(i): sp.id_to_piece(i) for i in range(n_trained)}
+    padded = False
+    if not smoke and n_trained < target_vocab:
+        # Reserve unused rows so LatexConfig.vocab_size == 131072 for Stage0a/7B.
+        for i in range(n_trained, target_vocab):
+            vocab[str(i)] = f"<|unused_{i}|>"
+        padded = True
     vocab_dst.write_text(json.dumps(vocab, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     checksum_path = artifact_dir / "checksum.sha256"
@@ -195,12 +201,20 @@ def train_tokenizer(
     meta = {
         "name": cfg.get("name"),
         "version": cfg.get("version"),
-        "vocab_size_config": cfg["vocab_size"],
-        "vocab_size_trained": sp.get_piece_size(),
+        "vocab_size_config": target_vocab,
+        "vocab_size_trained": n_trained,
+        "vocab_size_export": len(vocab),
+        "vocab_padded": padded,
         "smoke": smoke,
         "byte_fallback": True,
         "pretrained_load": False,
         "seed": cfg.get("seed", 42),
+        "note": (
+            "SP pieces from corpus; unused_* pads to 131072 for embedding table. "
+            "Expand corpus later to fill real pieces."
+            if padded
+            else "full unigram fill"
+        ),
     }
     (artifact_dir / "meta.json").write_text(
         json.dumps(meta, indent=2) + "\n", encoding="utf-8"

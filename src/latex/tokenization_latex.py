@@ -59,10 +59,14 @@ class LatexTokenizer(PreTrainedTokenizer):
                 if isinstance(meta, dict) and "token" in meta and "id" in meta:
                     self._specials[meta["token"]] = int(meta["id"])
 
+        self._vocab_size_override: Optional[int] = None
         if vocab_file and Path(vocab_file).is_file():
             self._load_sp(vocab_file)
+            # Prefer padded vocab.json next to tokenizer.model (131072 export)
+            vocab_json = Path(vocab_file).with_name("vocab.json")
+            if vocab_json.is_file():
+                self._load_vocab_json(vocab_json)
         else:
-            # Stub vocab from specials only (pre-Gate0 artifact)
             for tok, tid in self._specials.items():
                 self._piece_to_id[tok] = tid
                 self._id_to_piece[tid] = tok
@@ -78,7 +82,6 @@ class LatexTokenizer(PreTrainedTokenizer):
     def _load_sp(self, vocab_file: str):
         import sentencepiece as spm
 
-        # Only load NULLXES-owned artifacts (path check soft — caller responsibility)
         sp = spm.SentencePieceProcessor()
         sp.load(vocab_file)
         self._sp = sp
@@ -87,8 +90,19 @@ class LatexTokenizer(PreTrainedTokenizer):
             self._id_to_piece[i] = piece
             self._piece_to_id[piece] = i
 
+    def _load_vocab_json(self, path: Path) -> None:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for k, piece in data.items():
+            tid = int(k)
+            self._id_to_piece[tid] = piece
+            self._piece_to_id[piece] = tid
+        if data:
+            self._vocab_size_override = max(int(k) for k in data.keys()) + 1
+
     @property
     def vocab_size(self) -> int:
+        if self._vocab_size_override is not None:
+            return int(self._vocab_size_override)
         if self._sp is not None:
             return int(self._sp.get_piece_size())
         return max(self._id_to_piece.keys(), default=11) + 1

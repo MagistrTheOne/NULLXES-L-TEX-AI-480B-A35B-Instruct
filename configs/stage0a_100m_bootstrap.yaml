@@ -1,0 +1,81 @@
+# NULLXES-LÆTEX Stage0a bootstrap — first TRAINED brain (~100M)
+# Short token budget for H200 ~1h. Not Chinchilla-complete.
+stage: stage0a_bootstrap
+model:
+  name: nullxes-latex-stage0a-100m
+  architecture: nhat_dense
+  n_layers: 12
+  d_model: 512
+  n_heads: 8
+  n_kv_heads: 4
+  d_head: 64
+  d_ff: 1376
+  vocab_size: 131072
+  max_seq_len: 2048
+  rope_theta: 10000.0
+  rope_scaling:
+    enabled: false
+    target_context: 2048
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: false
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.0
+  tie_embeddings: true
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
+
+init:
+  scheme: mup
+  base_width: 512
+  base_depth: 12
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 200
+  output_dir: checkpoints/nullxes-latex-100m-stage0a-v0.1
+
+training:
+  enabled: true
+  precision: bf16
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 6.0e-4
+  schedule: wsd
+  warmup_ratio: 0.05
+  grad_clip: 1.0
+  # seq * micro_batch — accumulate to ~global_batch_tokens
+  seq_len: 512
+  micro_batch_size: 8
+  grad_accum_steps: 8
+  # ~50M tokens — first speaking brick, not full Chinchilla
+  tokens_target: 50_000_000
+  log_every: 20
+  identity_upsample: 8
+  corpus_manifest: datasets/manifests/pretrain_stage0.json
+
+hardware:
+  provider: generic
+  accelerator: cuda
+  gpu: H200
+  cluster:
+    nodes: 1
+    gpus: 1
