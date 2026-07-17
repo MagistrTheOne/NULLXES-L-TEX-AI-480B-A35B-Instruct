@@ -126,9 +126,8 @@ def train_tokenizer(
 
     corpus_path = prepare_corpus(cfg, runtime, smoke=smoke)
     if smoke:
-        # Seed+byte_fallback needs meta(specials+256 bytes)+alphabet room.
-        # Too small → SP error; too large on tiny corpus → opposite error.
-        # 768 fits current Gate0 seed (~100+ docs, multilingual).
+        # Seed+byte_fallback: floor ~520 (meta+alphabet), ceiling ~541 on
+        # current seed. Request above floor; soft limit lets SP shrink.
         vocab_size = 768
     else:
         vocab_size = int(cfg["vocab_size"])
@@ -162,6 +161,8 @@ def train_tokenizer(
         eos_piece=control[3],
         train_extremely_large_corpus=not smoke,
         seed_sentencepiece_size=int(cfg.get("seed", 42)),
+        # Smoke seed cannot fill 768 pieces; soft limit avoids "vocab too high".
+        hard_vocab_limit=not smoke,
     )
     nthreads = int(sp_cfg.get("num_threads", 0))
     if nthreads > 0:
