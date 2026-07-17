@@ -5,9 +5,10 @@ Append-only. One row per run.
 | ID | Date | Config | Hypothesis | Metric | Result | Decision | Notes |
 |----|------|--------|------------|--------|--------|----------|-------|
 | E000 | 2026-07-17 | — | Spec lock after GPT review | — | — | docs+ADR | — |
-| E001 | 2026-07-17 | tokenizer_stage0 | Gate0 fertility & representation | see 07 | pending | blocked NHAT | needs corpus PASS |
-| E001a | 2026-07-17 | corpus_gate0 | Seed corpus + validate | validate_corpus | pending | — | docs/10 |
-| E008 | 2026-07-17 | nullxes_latex_7b | Weight Genesis | init_report | pending | after Gate0 | docs/09 |
+| E001 | 2026-07-17 | tokenizer_stage0 | Gate0 fertility & representation | see 07 | smoke PASS / full pending | enlarge corpus → 131k | smoke vocab ~541 |
+| E001a | 2026-07-17 | corpus_gate0 | Seed corpus + validate | validate_corpus | PASS (seed) | grow raw/ for 131k | 105 docs |
+| E008 | 2026-07-17 | nullxes_latex_7b | Weight Genesis | init_report | **PASS** | 6.745B bf16 HF ckpt | H200 RunPod |
+| E008b | 2026-07-17 | smoke_hf_causal | generate + Auto* load | shape | **PASS** | cache fix b53f772 | checkpoints/nullxes-latex-7b |
 
 ## Planned queue (do not skip)
 
