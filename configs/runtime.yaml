@@ -1,0 +1,20 @@
+# Cloud-agnostic runtime — no RunPod/AWS imports in code.
+# Override paths via CLI or env when needed.
+
+compute:
+  accelerator: cuda
+  devices: auto
+  memory_policy:
+    cpu_offload: true
+  workers:
+    auto: true
+
+storage:
+  dataset_path: /workspace/datasets
+  streaming: true
+  mmap: true
+  processed_path: /workspace/datasets/processed
+  tokenizer_out: tokenizer/latex-v0.1
+
+precision:
+  tokenizer: fp32

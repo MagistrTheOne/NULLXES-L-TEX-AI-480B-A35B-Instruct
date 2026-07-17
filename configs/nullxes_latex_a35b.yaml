@@ -1,0 +1,72 @@
+# NULLXES-LÆTEX A35B — dense init backbone (~35.3B)
+# Used to initialize 480B-A35B MoE experts (same d_model).
+# Hardware: RunPod 32–64× B300 (preferred) or 64–128× H200
+model:
+  name: nullxes-latex-a35b
+  architecture: nhat_dense
+  role: init_backbone
+  n_layers: 48
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 22016
+  vocab_size: 131072
+  max_seq_len: 32768
+  rope_theta: 1000000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+    local_rope: true
+    global_nope: true
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+identity_embedding_layer:
+  enabled: true
+  n_identities: 64
+  inject: layer0
+  freeze_trunk_when_swapping: true
+  characters:
+    - anna
+    - adeline
+    - karen
+    - hr_agent
+    - sales_agent
+    - support_agent
+
+init:
+  scheme: truncated_normal
+  residual_scale: "0.02 / sqrt(2 * n_layers)"
+  mup: true
+  inherit_from: configs/nullxes_latex_7b.yaml
+
+training:
+  precision: fp8  # B300 default; bf16 warmup on H200 OK
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 8.0e-5
+  schedule: wsd
+  warmup_ratio: 0.015
+  grad_clip: 1.0
+  global_batch_tokens: 4194304
+  tokens_target: 500_000_000_000
+
+hardware:
+  provider: runpod
+  gpu: B300  # fallback: H200
+  gpus: 64
+  parallelism:
+    tp: 4
+    pp: 4
+    dp: 4
+    cp: 1

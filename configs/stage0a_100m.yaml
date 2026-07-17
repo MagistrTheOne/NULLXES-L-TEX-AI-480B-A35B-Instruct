@@ -1,0 +1,39 @@
+# NULLXES-LÆTEX Stage 0a — micro dense (~100M, tied emb)
+# Run ONLY after tokenizer fertility gate. Hardware: 1× H200
+model:
+  name: nullxes-latex-stage0a-100m
+  architecture: nhat_dense
+  n_layers: 12
+  d_model: 512
+  n_heads: 8
+  n_kv_heads: 4
+  d_head: 64
+  d_ff: 1376
+  vocab_size: 131072
+  max_seq_len: 2048
+  rope_theta: 10000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: false  # E002 local-only first; enable in E003
+  depth_nope_ratio: 0.0
+  tie_embeddings: true
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+training:
+  precision: bf16
+  optimizer: adamw
+  lr: 6.0e-4
+  schedule: wsd
+  warmup_ratio: 0.02
+  grad_clip: 1.0
+  global_batch_tokens: 65536
+  tokens_target: 10_000_000_000
+
+hardware:
+  provider: runpod
+  gpu: H200
+  gpus: 1

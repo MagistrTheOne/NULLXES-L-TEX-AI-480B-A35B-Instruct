@@ -1,0 +1,5 @@
+NULLXES-LÆTEX 是从零开始的基础模型研究。
+中文技术文本：KubernetesOperator 与 customer_support.workflow。
+标识符测试：NULLXES-LÆTEX-AI-480B-A35B、RFC-9457、gpt-4.1-mini。
+邮箱 research@nullxes.ai 与链接 https://nullxes.ai/docs 必须保留。
+你好，世界。分词生育率（fertility）检查。

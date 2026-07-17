@@ -1,0 +1,15 @@
+{
+  "product": "NULLXES-LÆTEX",
+  "model": "NULLXES-LÆTEX-AI-480B-A35B",
+  "tool_call": {
+    "name": "create_ticket",
+    "arguments": {
+      "workflow": "customer_support.workflow",
+      "inn": "ИНН2311391270",
+      "rfc": "RFC-9457"
+    }
+  },
+  "contact": "research@nullxes.ai",
+  "docs": "https://nullxes.ai/docs",
+  "probes": ["gpt-4.1-mini", "OpenAIRealtimeAPI", "KubernetesOperator"]
+}

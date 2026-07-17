@@ -1,0 +1,6 @@
+NULLXES-LÆTEX AI research lab builds foundation models from scratch.
+Technical English: RFC-9457 problem details, OpenAIRealtimeAPI naming stress test.
+Identifier: KubernetesOperator and customer_support.workflow must stay intact.
+Math: ∑ x_i^2 <= pi * epsilon. Contact research@nullxes.ai — https://nullxes.ai/docs
+gpt-4.1-mini is a foreign product name used only as a fragmentation probe.
+Hello, how are you? Fertility check for English prose.

@@ -1,0 +1,56 @@
+# NULLXES-LÆTEX Stage 1 — dense (~6.7B)
+# Hardware: RunPod 8–32× H200 Instant Cluster
+model:
+  name: nullxes-latex-7b
+  architecture: nhat_dense
+  n_layers: 32
+  d_model: 4096
+  n_heads: 32
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 11008
+  vocab_size: 131072
+  max_seq_len: 8192
+  rope_theta: 500000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+    local_rope: true
+    global_nope: true
+  tie_embeddings: false
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+init:
+  scheme: truncated_normal
+  residual_scale: "0.02 / sqrt(2 * n_layers)"
+  mup: true
+  inherit_from: null  # optional: stage0 width-scaled
+
+training:
+  precision: bf16  # FP8 after stable proxy
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 1.5e-4
+  schedule: wsd
+  warmup_ratio: 0.02
+  grad_clip: 1.0
+  global_batch_tokens: 2097152
+  tokens_target: 180_000_000_000
+
+hardware:
+  provider: runpod
+  gpu: H200
+  gpus: 8
+  parallelism:
+    tp: 2
+    pp: 1
+    dp: 4

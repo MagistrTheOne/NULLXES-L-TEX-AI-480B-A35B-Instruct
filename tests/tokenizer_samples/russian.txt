@@ -1,0 +1,5 @@
+NULLXES-LÆTEX — лабораторный стенд цифровых сотрудников.
+Технический текст: договор поставки, счёт-фактура, ИНН2311391270.
+Русский технический абзац: KubernetesOperator масштабирует customer_support.workflow.
+Математика: ∑_{i=1}^{n} x_i² ≤ π · ε. Email: research@nullxes.ai URL: https://nullxes.ai/docs
+Привет, как дела? Проверка fertility для русского языка.

@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info:
+  title: NULLXES-LÆTEX Tool API
+  version: 0.1.0
+paths:
+  /v1/tool_call:
+    post:
+      summary: Execute structured tool_call
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workflow:
+                  type: string
+                  example: customer_support.workflow
+                model:
+                  type: string
+                  example: NULLXES-LÆTEX-AI-480B-A35B
+                probe:
+                  type: string
+                  example: OpenAIRealtimeAPI
+servers:
+  - url: https://nullxes.ai/api

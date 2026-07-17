@@ -1,0 +1,65 @@
+# NULLXES-LÆTEX Stage 0c — research dense (~1.6B)
+# After tokenizer + 0a + 0b gates. Hardware: RunPod 1–8× H200 SXM
+# Former stage0_1b6 — renamed for micro-ladder clarity.
+model:
+  name: nullxes-latex-stage0c-1b6
+  architecture: nhat_dense
+  n_layers: 24
+  d_model: 2048
+  n_heads: 16
+  n_kv_heads: 4
+  d_head: 128
+  d_ff: 5504
+  vocab_size: 131072
+  max_seq_len: 4096
+  rope_theta: 50000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+  depth_nope_ratio: 0.25
+  full_attention_nope: true
+  tie_embeddings: false
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+identity_embedding_layer:
+  enabled: true
+  n_identities: 16
+  inject: layer0
+
+role_adapter:
+  enabled: true
+  n_roles: 16
+
+init:
+  scheme: truncated_normal
+  residual_scale: "0.02 / sqrt(2 * n_layers)"
+  mup: true
+
+training:
+  precision: bf16
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 3.0e-4
+  schedule: wsd
+  warmup_ratio: 0.02
+  grad_clip: 1.0
+  global_batch_tokens: 524288
+  tokens_target: 80_000_000_000
+
+hardware:
+  provider: runpod
+  gpu: H200
+  gpus: 8
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 8

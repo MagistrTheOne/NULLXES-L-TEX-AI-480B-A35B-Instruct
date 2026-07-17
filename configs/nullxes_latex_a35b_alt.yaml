@@ -1,0 +1,29 @@
+# NULLXES-LÆTEX A35B-alt — deeper/narrower dense (~34B)
+# Alternate init cfg; same MoE expansion rules if width matched via projector.
+model:
+  name: nullxes-latex-a35b-alt
+  architecture: nhat_dense
+  role: init_backbone_alt
+  n_layers: 60
+  d_model: 7168
+  n_heads: 56
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 19456
+  vocab_size: 131072
+  max_seq_len: 32768
+  rope_theta: 1000000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+  tie_embeddings: false
+  note: "Prefer nullxes_latex_a35b.yaml (d_model=8192) for zero-copy MoE expand."
+
+hardware:
+  provider: runpod
+  gpu: B300
+  gpus: 64

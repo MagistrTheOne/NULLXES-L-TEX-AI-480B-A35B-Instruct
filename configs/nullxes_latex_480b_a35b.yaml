@@ -1,0 +1,115 @@
+# NULLXES-LÆTEX AI 480B-A35B-Instruct (MoE)
+# ~476.0B total / ~35.1B active per token (scripts/param_count.py)
+# Init: expand from configs/nullxes_latex_a35b.yaml
+# Hardware: RunPod 256–512× B300 Instant Clusters (preferred)
+model:
+  name: nullxes-latex-480b-a35b-instruct
+  architecture: nhat_moe
+  n_layers: 64
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff_dense: 22016
+  d_ff_expert: 2048
+  vocab_size: 131072  # 262144 only via docs/08_VOCAB_MIGRATION.md experiment — never auto
+  max_seq_len_train: 32768
+  max_seq_len_infer: 131072
+  rope_theta: 1000000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa  # MLA optional if KV-bound
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+    local_rope: true
+    global_nope: true
+  dense_prefix_layers: 4
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+moe:
+  n_routed_experts: 152
+  n_shared_experts: 1
+  top_k: 6
+  router: nx_sigmoid_normalize
+  router_dtype: fp32
+  capacity_factor: 1.25
+  load_balance: aux_loss_free_bias  # SMEBU-style
+  aux_loss_coeff_warmup: 0.01
+  aux_loss_warmup_steps: 5000
+  expert_diversity_loss: true
+  diversity_coeff: 1.0e-4
+  # Ranges below are POST-HOC monitoring labels after clustering — not hard binds
+  expert_banks_posthoc_example:
+    reasoning: [0, 15]
+    coding: [16, 31]
+    enterprise: [32, 47]
+    finance: [48, 59]
+    law: [60, 71]
+    science: [72, 83]
+    multilingual: [84, 99]
+    agent_behavior: [100, 115]
+    memory: [116, 131]
+    communication: [132, 151]
+
+identity_embedding_layer:
+  enabled: true
+  n_identities: 64
+  inject: layer0
+  freeze_trunk_when_swapping: true
+  characters:
+    - anna
+    - adeline
+    - karen
+    - hr_agent
+    - sales_agent
+    - support_agent
+
+init:
+  scheme: expand_from_a35b
+  a35b_checkpoint: null  # set after Stage 2
+  expert_noise: orthogonal
+  noise_scale_start: 0.02
+  noise_scale_end: 0.005
+  noise_schedule: cosine
+  shared_expert_noise: false
+  router_std: 0.01
+  expert_bias_init: 0.0
+  mup: true
+  expert_taxonomy: posthoc_clustering_only
+
+training:
+  precision: fp8
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 3.0e-5
+  schedule: wsd
+  warmup_ratio: 0.01
+  grad_clip: 1.0
+  global_batch_tokens: 8388608
+  tokens_target: 1_500_000_000_000  # active-aligned multi-epoch OK
+  stop_on_expert_collapse: true
+
+alignment:
+  pipeline: [sft, dpo, axo, epo]
+  persona: digital_employee  # not generic assistant
+
+hardware:
+  provider: runpod
+  gpu: B300
+  gpus: 512
+  fallback_gpu: H200
+  fallback_gpus: 1024
+  parallelism:
+    tp: 4
+    pp: 8
+    ep: 16
+    cp: 2
+    dp: auto

@@ -1,0 +1,42 @@
+# NULLXES-LÆTEX Stage 0b — research dense (~530M)
+# After Stage0a stable. Hardware: 1–4× H200
+model:
+  name: nullxes-latex-stage0b-500m
+  architecture: nhat_dense
+  n_layers: 24
+  d_model: 1024
+  n_heads: 16
+  n_kv_heads: 4
+  d_head: 64
+  d_ff: 2816
+  vocab_size: 131072
+  max_seq_len: 4096
+  rope_theta: 50000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+  depth_nope_ratio: 0.25  # top 25% NoPE
+  full_attention_nope: true
+  tie_embeddings: false
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+training:
+  precision: bf16
+  optimizer: adamw
+  lr: 4.0e-4
+  schedule: wsd
+  warmup_ratio: 0.02
+  grad_clip: 1.0
+  global_batch_tokens: 262144
+  tokens_target: 40_000_000_000
+
+hardware:
+  provider: runpod
+  gpu: H200
+  gpus: 4
