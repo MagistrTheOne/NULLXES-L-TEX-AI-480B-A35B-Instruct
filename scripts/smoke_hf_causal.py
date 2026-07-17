@@ -51,7 +51,10 @@ def main() -> int:
     print(f"[load] {ckpt}", flush=True)
     config = AutoConfig.from_pretrained(ckpt, trust_remote_code=False)
     assert config.model_type == "latex", config.model_type
-    model = AutoModelForCausalLM.from_pretrained(ckpt, torch_dtype=torch.bfloat16)
+    try:
+        model = AutoModelForCausalLM.from_pretrained(ckpt, dtype=torch.bfloat16)
+    except TypeError:
+        model = AutoModelForCausalLM.from_pretrained(ckpt, torch_dtype=torch.bfloat16)
     if args.device == "cuda":
         model = model.to("cuda")
     print("config.model_type =", model.config.model_type, flush=True)
@@ -59,7 +62,8 @@ def main() -> int:
 
     device = next(model.parameters()).device
     ids = torch.tensor([[2, 10, 11, 3]], device=device)
-    out = model.generate(ids, max_new_tokens=4)
+    out = model.generate(ids, max_new_tokens=4, use_cache=True)
+    assert out.shape[-1] == ids.shape[-1] + 4, out.shape
     print("generate shape =", tuple(out.shape), flush=True)
     print("[PASS] HF CausalLM smoke", flush=True)
     return 0

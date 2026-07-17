@@ -25,6 +25,54 @@ from latex.models.embeddings import LatexRMSNorm, LatexRotaryEmbedding
 from latex.models.nhat_block import NHATDecoderLayer
 
 
+def _normalize_past_key_values(past_key_values) -> Tuple[Optional[Tuple], int]:
+    """Convert HF Cache / legacy tuple → (legacy_or_None, past_seq_len).
+
+    transformers≥4.46 generate() may pass an empty DynamicCache whose layers
+    are (None, None) — treat that as no past.
+    """
+    if past_key_values is None:
+        return None, 0
+
+    if hasattr(past_key_values, "get_seq_length"):
+        try:
+            seq_len = int(past_key_values.get_seq_length())
+        except Exception:  # noqa: BLE001
+            seq_len = 0
+        if seq_len == 0:
+            return None, 0
+        if hasattr(past_key_values, "to_legacy_cache"):
+            past_key_values = past_key_values.to_legacy_cache()
+
+    if not past_key_values:
+        return None, 0
+
+    layer0 = past_key_values[0]
+    if layer0 is None:
+        return None, 0
+    if isinstance(layer0, (tuple, list)):
+        key = layer0[0] if len(layer0) > 0 else None
+        if key is None or not hasattr(key, "shape"):
+            return None, 0
+        return past_key_values, int(key.shape[2])
+
+    return None, 0
+
+
+def _layer_past(past_key_values, idx: int):
+    if past_key_values is None:
+        return None
+    try:
+        pkv = past_key_values[idx]
+    except (IndexError, KeyError, TypeError):
+        return None
+    if pkv is None:
+        return None
+    if isinstance(pkv, (tuple, list)) and (len(pkv) < 2 or pkv[0] is None or pkv[1] is None):
+        return None
+    return pkv
+
+
 class LatexPreTrainedModel(PreTrainedModel):
     config_class = LatexConfig
     base_model_prefix = "model"
@@ -108,9 +156,7 @@ class LatexModel(LatexPreTrainedModel):
         else:
             raise ValueError("You must specify input_ids or inputs_embeds")
 
-        past_key_values_length = 0
-        if past_key_values is not None and len(past_key_values) > 0 and past_key_values[0] is not None:
-            past_key_values_length = past_key_values[0][0].shape[2]
+        past_key_values, past_key_values_length = _normalize_past_key_values(past_key_values)
 
         if position_ids is None:
             device = inputs_embeds.device
@@ -162,9 +208,7 @@ class LatexModel(LatexPreTrainedModel):
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
-            past_key_value = (
-                past_key_values[idx] if past_key_values is not None else None
-            )
+            past_key_value = _layer_past(past_key_values, idx)
 
             layer_outputs = decoder_layer(
                 hidden_states,
@@ -298,8 +342,14 @@ class LatexForCausalLM(LatexPreTrainedModel, GenerationMixin):
         inputs_embeds=None,
         **kwargs,
     ):
-        if past_key_values is not None:
+        _, past_len = _normalize_past_key_values(past_key_values)
+        if past_len > 0:
             input_ids = input_ids[:, -1:]
+        elif past_key_values is not None and hasattr(past_key_values, "get_seq_length"):
+            # Empty Cache from generate() — drop it so first step is cache-less.
+            if past_key_values.get_seq_length() == 0:
+                past_key_values = None
+
         model_inputs = (
             {"inputs_embeds": inputs_embeds}
             if inputs_embeds is not None and past_key_values is None
@@ -308,7 +358,7 @@ class LatexForCausalLM(LatexPreTrainedModel, GenerationMixin):
         model_inputs.update(
             {
                 "past_key_values": past_key_values,
-                "use_cache": kwargs.get("use_cache"),
+                "use_cache": kwargs.get("use_cache", True),
                 "attention_mask": attention_mask,
             }
         )
