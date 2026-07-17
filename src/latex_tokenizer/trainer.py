@@ -126,8 +126,10 @@ def train_tokenizer(
 
     corpus_path = prepare_corpus(cfg, runtime, smoke=smoke)
     if smoke:
-        # Tiny sample corpus cannot fill 131k / 1024 — use safe smoke size
-        vocab_size = 450
+        # Seed+byte_fallback needs meta(specials+256 bytes)+alphabet room.
+        # Too small → SP error; too large on tiny corpus → opposite error.
+        # 768 fits current Gate0 seed (~100+ docs, multilingual).
+        vocab_size = 768
     else:
         vocab_size = int(cfg["vocab_size"])
     # Reserve room: SP vocab_size includes specials when user_defined_symbols set
