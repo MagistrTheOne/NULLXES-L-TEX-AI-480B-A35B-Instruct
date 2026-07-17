@@ -28,7 +28,8 @@ def main() -> int:
         print("Run: python scripts/build_seed_corpus.py", file=sys.stderr)
         return 2
     report = validate_corpus(man, repo_root=ROOT, min_docs_per_bucket=args.min_docs)
-    out = ROOT / "datasets" / "manifests" / "gate0_validate_report.json"
+    stem = man.stem.replace("/", "_")
+    out = ROOT / "datasets" / "manifests" / f"{stem}_validate_report.json"
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"passed": report["passed"], "buckets": report["buckets"], "error_count": report["error_count"]}, indent=2))
     if not report["passed"]:

@@ -14,10 +14,13 @@ BUCKETS = (
 
 REQUIRED = ("id", "text", "bucket")
 
+# Dialogue / persona coaching only — listing employee names (Anna, …) is allowed.
 PERSONA_BAN_MARKERS = (
-    "anna said",
-    "adeline said",
-    "karen said",
+    "anna said:",
+    "adeline said:",
+    "karen said:",
+    "anna said “",
+    'anna said "',
     "i am your digital employee",
     "my personality is",
     "speaking in a warm tone",

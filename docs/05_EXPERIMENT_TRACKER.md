@@ -9,6 +9,7 @@ Append-only. One row per run.
 | E001a | 2026-07-17 | corpus_gate0 | Seed corpus + validate | validate_corpus | PASS (seed) | grow raw/ for 131k | 105 docs |
 | E008 | 2026-07-17 | nullxes_latex_7b | Weight Genesis | init_report | **PASS** | 6.745B bf16 HF ckpt | H200 RunPod |
 | E008b | 2026-07-17 | smoke_hf_causal | generate + Auto* load | shape | **PASS** | cache fix b53f772 | checkpoints/nullxes-latex-7b |
+| E009 | 2026-07-17 | identity_corpus | LÆTEX name + repo code shards | validate | in progress | Stage0a next, not 7B SFT | build_identity_corpus.py |
 
 ## Planned queue (do not skip)
 

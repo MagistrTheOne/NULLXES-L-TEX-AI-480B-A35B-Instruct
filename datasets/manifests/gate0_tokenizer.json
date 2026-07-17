@@ -1,6 +1,6 @@
 {
   "name": "gate0_tokenizer",
-  "version": "0.1",
+  "version": "0.2-identity",
   "mix": {
     "multilingual": 0.4,
     "code": 0.25,
@@ -11,41 +11,51 @@
   "shards": {
     "multilingual": {
       "files": [
-        "datasets/seed/multilingual/seed_0001.jsonl"
+        "datasets/seed/multilingual/seed_0001.jsonl",
+        "datasets/raw/shards/identity/nullxes_identity.jsonl"
       ],
-      "docs": 25
+      "docs": 36
     },
     "code": {
       "files": [
-        "datasets/seed/code/seed_0001.jsonl"
+        "datasets/seed/code/seed_0001.jsonl",
+        "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
+        "datasets/raw/shards/code/frontend.jsonl",
+        "datasets/raw/shards/code/backend.jsonl",
+        "datasets/raw/shards/code/infrastructure.jsonl"
       ],
-      "docs": 20
+      "docs": 160
     },
     "enterprise": {
       "files": [
-        "datasets/seed/enterprise/seed_0001.jsonl"
+        "datasets/seed/enterprise/seed_0001.jsonl",
+        "datasets/raw/shards/docs/digital_employee.jsonl",
+        "datasets/raw/shards/docs/enterprise_ai.jsonl"
       ],
-      "docs": 20
+      "docs": 31
     },
     "scientific": {
       "files": [
-        "datasets/seed/scientific/seed_0001.jsonl"
+        "datasets/seed/scientific/seed_0001.jsonl",
+        "datasets/raw/shards/identity/latex_architecture.jsonl",
+        "datasets/raw/shards/reasoning/technical_reasoning.jsonl"
       ],
-      "docs": 20
+      "docs": 31
     },
     "synthetic_structure": {
       "files": [
-        "datasets/seed/synthetic_structure/seed_0001.jsonl"
+        "datasets/seed/synthetic_structure/seed_0001.jsonl",
+        "datasets/sft/identity_v0.1.jsonl"
       ],
-      "docs": 20
+      "docs": 25
     }
   },
   "totals": {
-    "multilingual": 25,
-    "code": 20,
-    "enterprise": 20,
-    "scientific": 20,
-    "synthetic_structure": 20
+    "multilingual": 36,
+    "code": 160,
+    "enterprise": 31,
+    "scientific": 31,
+    "synthetic_structure": 25
   },
-  "notes": "Committed seed bootstrap. Expand via datasets/raw/shards for production Gate0."
+  "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT."
 }

@@ -13,7 +13,11 @@ See [`docs/10_CORPUS_PLAN.md`](../docs/10_CORPUS_PLAN.md).
 ```bash
 python scripts/scaffold_corpus.py
 python scripts/build_seed_corpus.py
+python scripts/build_identity_corpus.py
 python scripts/validate_corpus.py --manifest datasets/manifests/gate0_tokenizer.json
+python scripts/validate_corpus.py --manifest datasets/manifests/pretrain_stage0.json
 ```
+
+Identity rule: the brain name is **LÆTEX / NULLXES-LÆTEX** (not ChatGPT/Claude/Llama cosplay).
 
 Product site (real): https://www.nullxesdai.online/

@@ -1,14 +1,62 @@
 {
   "name": "pretrain_stage0",
-  "version": "0.1-stub",
-  "status": "EMPTY_PLACEHOLDER",
+  "version": "0.2-identity",
   "mix": {
-    "multilingual": 0.40,
+    "multilingual": 0.4,
     "code": 0.25,
-    "enterprise": 0.20,
-    "scientific": 0.10,
+    "enterprise": 0.2,
+    "scientific": 0.1,
     "synthetic_structure": 0.05
   },
-  "shards": {},
-  "notes": "Fill datasets/raw/shards/<bucket>/*.jsonl then regenerate this manifest. Same schema as Gate0. Do not train NHAT until Gate0 PASS + this manifest validates."
+  "shards": {
+    "multilingual": {
+      "files": [
+        "datasets/seed/multilingual/seed_0001.jsonl",
+        "datasets/raw/shards/identity/nullxes_identity.jsonl"
+      ],
+      "docs": 36
+    },
+    "code": {
+      "files": [
+        "datasets/seed/code/seed_0001.jsonl",
+        "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
+        "datasets/raw/shards/code/frontend.jsonl",
+        "datasets/raw/shards/code/backend.jsonl",
+        "datasets/raw/shards/code/infrastructure.jsonl"
+      ],
+      "docs": 160
+    },
+    "enterprise": {
+      "files": [
+        "datasets/seed/enterprise/seed_0001.jsonl",
+        "datasets/raw/shards/docs/digital_employee.jsonl",
+        "datasets/raw/shards/docs/enterprise_ai.jsonl"
+      ],
+      "docs": 31
+    },
+    "scientific": {
+      "files": [
+        "datasets/seed/scientific/seed_0001.jsonl",
+        "datasets/raw/shards/identity/latex_architecture.jsonl",
+        "datasets/raw/shards/reasoning/technical_reasoning.jsonl"
+      ],
+      "docs": 31
+    },
+    "synthetic_structure": {
+      "files": [
+        "datasets/seed/synthetic_structure/seed_0001.jsonl",
+        "datasets/sft/identity_v0.1.jsonl"
+      ],
+      "docs": 25
+    }
+  },
+  "totals": {
+    "multilingual": 36,
+    "code": 160,
+    "enterprise": 31,
+    "scientific": 31,
+    "synthetic_structure": 25
+  },
+  "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT.",
+  "status": "READY_FOR_STAGE0A"
 }
