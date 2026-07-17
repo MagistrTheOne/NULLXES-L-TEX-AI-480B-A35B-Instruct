@@ -3,7 +3,7 @@
 from typing import Optional
 
 
-def kubernetesOperator(name: str, replicas: int = 3) -> dict:
+def KubernetesOperator(name: str, replicas: int = 3) -> dict:
     # customer_support.workflow must not be shredded
     return {
         "apiVersion": "apps/v1",
@@ -14,7 +14,7 @@ def kubernetesOperator(name: str, replicas: int = 3) -> dict:
 
 
 def contact() -> str:
-    return "research@nullxes.ai"
+    return "ceo@nullxes.com"
 
 
 if __name__ == "__main__":

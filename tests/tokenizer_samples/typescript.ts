@@ -11,7 +11,7 @@ export function KubernetesOperator(spec: OperatorSpec): OperatorSpec {
   // Fragmentation probes: NULLXES-LÆTEX, gpt-4.1-mini, OpenAIRealtimeAPI
   return {
     ...spec,
-    endpoint: "https://nullxes.ai/docs",
+    endpoint: "https://www.nullxesdai.online/",
   };
 }
 

@@ -7,8 +7,8 @@ Foundation research notes for **Research Gate 0**.
 - Workflow: `customer_support.workflow`
 - Probes: `gpt-4.1-mini`, `KubernetesOperator`, `RFC-9457`
 
-Contact: research@nullxes.ai  
-Docs: https://nullxes.ai/docs
+Contact: ceo@nullxes.com  
+Site: https://www.nullxesdai.online/
 
 ```json
 {"tool_call": true, "workflow": "customer_support.workflow"}

@@ -78,7 +78,7 @@ def run_gate0_eval(cfg: dict[str, Any], *, smoke: bool = False) -> dict[str, Any
     report["checks"]["determinism"] = {"passed": check_determinism(sp, probe)}
 
     # Unicode / math
-    math_probe = samples.get("russian.txt", "∑ π ε research@nullxes.ai https://nullxes.ai")
+    math_probe = samples.get("russian.txt", "∑ π ε ceo@nullxes.com https://www.nullxesdai.online/")
     report["checks"]["unicode_preserve"] = {
         "passed": preserves_math_code_hints(math_probe),
     }

@@ -9,7 +9,7 @@
       "rfc": "RFC-9457"
     }
   },
-  "contact": "research@nullxes.ai",
-  "docs": "https://nullxes.ai/docs",
+  "contact": "ceo@nullxes.com",
+  "docs": "https://www.nullxesdai.online/",
   "probes": ["gpt-4.1-mini", "OpenAIRealtimeAPI", "KubernetesOperator"]
 }

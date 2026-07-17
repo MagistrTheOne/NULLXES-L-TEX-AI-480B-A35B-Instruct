@@ -22,4 +22,4 @@ paths:
                   type: string
                   example: OpenAIRealtimeAPI
 servers:
-  - url: https://nullxes.ai/api
+  - url: https://www.nullxesdai.online/

@@ -4,5 +4,5 @@
 Ссылка на RFC-9457 (Problem Details for HTTP APIs).
 Рабочий процесс: customer_support.workflow.
 Оператор инфраструктуры: KubernetesOperator.
-Контакт: legal@nullxes.ai — https://nullxes.ai/legal
+Контакт: ceo@nullxes.com — https://www.nullxesdai.online/
 Запрещено включать в tokenizer-синтетику персональные стили сотрудников.

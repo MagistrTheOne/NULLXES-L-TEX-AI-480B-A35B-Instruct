@@ -15,6 +15,8 @@
 
 **Сначала научить модель видеть язык. Потом строить кору.**
 
+Product: [nullxesdai.online](https://www.nullxesdai.online/) · Contact: ceo@nullxes.com
+
 [![Gate](https://img.shields.io/badge/Research_Gate_0-ACTIVE-0a0a0a?style=flat-square&labelColor=111111&color=c8ff00)](docs/07_RESEARCH_GATE_0.md)
 [![NHAT](https://img.shields.io/badge/NHAT-BLOCKED_until_Gate0_PASS-0a0a0a?style=flat-square&labelColor=111111&color=ff4d4d)](docs/07_RESEARCH_GATE_0.md)
 [![Tokenizer](https://img.shields.io/badge/Tokenizer-v0.1_131k-0a0a0a?style=flat-square&labelColor=111111&color=6b8aff)](docs/06_TOKENIZER_DESIGN.md)
