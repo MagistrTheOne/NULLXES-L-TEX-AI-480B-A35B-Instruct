@@ -1,0 +1,2 @@
+# Alias: same as requirements.txt (Gate 0 Tokenizer Fertility Gate)
+-r requirements.txt

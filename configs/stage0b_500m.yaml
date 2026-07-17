@@ -1,5 +1,5 @@
 # NULLXES-LÆTEX Stage 0b — research dense (~530M)
-# After Stage0a stable. Hardware: 1–4× H200
+stage: stage0b
 model:
   name: nullxes-latex-stage0b-500m
   architecture: nhat_dense
@@ -12,6 +12,9 @@ model:
   vocab_size: 131072
   max_seq_len: 4096
   rope_theta: 50000.0
+  rope_scaling:
+    enabled: true
+    target_context: 16384
   norm: rmsnorm
   activation: swiglu
   attention: gqa
@@ -19,14 +22,39 @@ model:
     enabled: true
     local_window: 4096
     full_every: 4
-  depth_nope_ratio: 0.25  # top 25% NoPE
-  full_attention_nope: true
+    local_rope: true
+    global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.25
   tie_embeddings: false
-  qk_norm: false
+  qk_norm: true
   z_loss_coeff: 1.0e-5
   no_bias: true
 
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
+
+init:
+  scheme: mup
+  base_width: 512
+  base_depth: 12
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 500
+  output_dir: checkpoints/nullxes-latex-stage0b-500m
+
 training:
+  enabled: false
   precision: bf16
   optimizer: adamw
   lr: 4.0e-4
@@ -37,6 +65,15 @@ training:
   tokens_target: 40_000_000_000
 
 hardware:
-  provider: runpod
+  provider: generic
+  accelerator: cuda
   gpu: H200
-  gpus: 4
+  cluster:
+    nodes: 1
+    gpus: 4
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 4
+  backend:
+    distributed: nccl

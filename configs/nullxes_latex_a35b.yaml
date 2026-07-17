@@ -1,6 +1,6 @@
-# NULLXES-LÆTEX A35B — dense init backbone (~35.3B)
-# Used to initialize 480B-A35B MoE experts (same d_model).
-# Hardware: RunPod 32–64× B300 (preferred) or 64–128× H200
+# NULLXES-LÆTEX A35B — dense genetic ancestor (~35.3B)
+# Weight Genesis / pretrain after Stage1; MoE expand parent for 480B.
+stage: a35b
 model:
   name: nullxes-latex-a35b
   architecture: nhat_dense
@@ -14,6 +14,9 @@ model:
   vocab_size: 131072
   max_seq_len: 32768
   rope_theta: 1000000.0
+  rope_scaling:
+    enabled: true
+    target_context: 131072
   norm: rmsnorm
   activation: swiglu
   attention: gqa
@@ -23,10 +26,20 @@ model:
     full_every: 4
     local_rope: true
     global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.25
   tie_embeddings: false
   qk_norm: true
   z_loss_coeff: 1.0e-5
   no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
 
 identity_embedding_layer:
   enabled: true
@@ -42,13 +55,23 @@ identity_embedding_layer:
     - support_agent
 
 init:
-  scheme: truncated_normal
-  residual_scale: "0.02 / sqrt(2 * n_layers)"
-  mup: true
+  scheme: mup
+  base_width: 2048
+  base_depth: 32
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
   inherit_from: configs/nullxes_latex_7b.yaml
 
+checkpoint:
+  format: safetensors
+  save_every_steps: 1000
+  output_dir: checkpoints/nullxes-latex-a35b
+
 training:
-  precision: fp8  # B300 default; bf16 warmup on H200 OK
+  enabled: false
+  precision: fp8
   optimizer: adamw
   beta1: 0.9
   beta2: 0.95
@@ -62,11 +85,16 @@ training:
   tokens_target: 500_000_000_000
 
 hardware:
-  provider: runpod
-  gpu: B300  # fallback: H200
-  gpus: 64
+  provider: generic
+  accelerator: cuda
+  gpu: B300
+  cluster:
+    nodes: 8
+    gpus: 64
   parallelism:
     tp: 4
     pp: 4
     dp: 4
     cp: 1
+  backend:
+    distributed: nccl

@@ -1,0 +1,51 @@
+{
+  "name": "gate0_tokenizer",
+  "version": "0.1",
+  "mix": {
+    "multilingual": 0.4,
+    "code": 0.25,
+    "enterprise": 0.2,
+    "scientific": 0.1,
+    "synthetic_structure": 0.05
+  },
+  "shards": {
+    "multilingual": {
+      "files": [
+        "datasets/seed/multilingual/seed_0001.jsonl"
+      ],
+      "docs": 25
+    },
+    "code": {
+      "files": [
+        "datasets/seed/code/seed_0001.jsonl"
+      ],
+      "docs": 20
+    },
+    "enterprise": {
+      "files": [
+        "datasets/seed/enterprise/seed_0001.jsonl"
+      ],
+      "docs": 20
+    },
+    "scientific": {
+      "files": [
+        "datasets/seed/scientific/seed_0001.jsonl"
+      ],
+      "docs": 20
+    },
+    "synthetic_structure": {
+      "files": [
+        "datasets/seed/synthetic_structure/seed_0001.jsonl"
+      ],
+      "docs": 20
+    }
+  },
+  "totals": {
+    "multilingual": 25,
+    "code": 20,
+    "enterprise": 20,
+    "scientific": 20,
+    "synthetic_structure": 20
+  },
+  "notes": "Committed seed bootstrap. Expand via datasets/raw/shards for production Gate0."
+}

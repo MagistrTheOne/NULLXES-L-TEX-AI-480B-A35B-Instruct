@@ -76,6 +76,8 @@ paths:
   samples_dir: tests/tokenizer_samples
   artifact_dir: tokenizer/latex-v0.1
   runtime_config: configs/runtime.yaml
+  corpus_manifest: datasets/manifests/gate0_tokenizer.json
+  corpus_config: configs/corpus_gate0.yaml
 
 fragmentation_must_not_char_split:
   - "NULLXES-LÆTEX"

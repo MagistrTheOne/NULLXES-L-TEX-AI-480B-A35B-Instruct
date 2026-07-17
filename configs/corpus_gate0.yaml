@@ -1,0 +1,46 @@
+# Corpus mix + paths for Gate0 tokenizer / Stage0 pretrain planning
+
+name: nullxes-corpus-gate0
+version: "0.1"
+
+schema: datasets/schema/record.schema.json
+manifest: datasets/manifests/gate0_tokenizer.json
+
+mix:
+  multilingual: 0.40
+  code: 0.25
+  enterprise: 0.20
+  scientific: 0.10
+  synthetic_structure: 0.05
+
+buckets:
+  multilingual:
+    langs: [ru, en, zh, de, fr]
+  code:
+    langs: [code]
+  enterprise:
+    langs: [ru, en]
+  scientific:
+    langs: [en, ru]
+  synthetic_structure:
+    langs: [struct]
+
+min_docs_per_bucket: 20
+min_text_chars: 32
+
+bans:
+  - personality
+  - tone_coaching
+  - employee_behavior
+  - brand_slogans
+  - persona_dialogue
+
+allowed_urls:
+  - https://www.nullxesdai.online/
+allowed_emails:
+  - ceo@nullxes.com
+
+paths:
+  seed_root: datasets/seed
+  raw_root: datasets/raw/shards
+  processed_root: datasets/processed

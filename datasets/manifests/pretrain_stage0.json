@@ -1,0 +1,14 @@
+{
+  "name": "pretrain_stage0",
+  "version": "0.1-stub",
+  "status": "EMPTY_PLACEHOLDER",
+  "mix": {
+    "multilingual": 0.40,
+    "code": 0.25,
+    "enterprise": 0.20,
+    "scientific": 0.10,
+    "synthetic_structure": 0.05
+  },
+  "shards": {},
+  "notes": "Fill datasets/raw/shards/<bucket>/*.jsonl then regenerate this manifest. Same schema as Gate0. Do not train NHAT until Gate0 PASS + this manifest validates."
+}

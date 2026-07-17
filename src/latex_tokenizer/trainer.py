@@ -11,6 +11,7 @@ from typing import Any
 from latex_tokenizer.corpus import (
     discover_shards,
     iter_jsonl_shard,
+    iter_manifest_texts,
     iter_sample_dir,
     write_train_corpus,
 )
@@ -47,18 +48,35 @@ def build_user_defined_symbols(cfg: dict[str, Any]) -> list[str]:
 def prepare_corpus(cfg: dict[str, Any], runtime: dict[str, Any], smoke: bool) -> Path:
     storage = runtime.get("storage", {})
     dataset_path = Path(storage.get("dataset_path", "datasets"))
+    # Prefer repo-relative datasets/ when runtime points at /workspace
+    repo_guess = Path(__file__).resolve().parents[2]
+    if not dataset_path.is_dir() or str(dataset_path).startswith("/workspace"):
+        local = repo_guess / "datasets"
+        if local.is_dir():
+            dataset_path = local
+
     artifact_dir = Path(cfg["paths"]["artifact_dir"])
     tmp = artifact_dir / "tmp"
     tmp.mkdir(parents=True, exist_ok=True)
     corpus_path = tmp / ("corpus_smoke.txt" if smoke else "corpus.txt")
 
+    manifest_path = repo_guess / "datasets" / "manifests" / "gate0_tokenizer.json"
+    if cfg.get("paths", {}).get("corpus_manifest"):
+        manifest_path = Path(cfg["paths"]["corpus_manifest"])
+        if not manifest_path.is_absolute():
+            manifest_path = repo_guess / manifest_path
+
     def gen():
-        shards = discover_shards(dataset_path)
-        if shards:
+        if manifest_path.is_file():
+            man = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for text in iter_manifest_texts(man, repo_guess):
+                yield normalize_text(text)
+        else:
+            shards = discover_shards(dataset_path)
             for shard in shards:
                 for text in iter_jsonl_shard(shard):
                     yield normalize_text(text)
-        # Always include fixed samples (representation probes)
+        # Always include fixed fertility probes
         samples = Path(cfg["paths"]["samples_dir"])
         for _, text in iter_sample_dir(samples):
             yield normalize_text(text)
@@ -67,7 +85,8 @@ def prepare_corpus(cfg: dict[str, Any], runtime: dict[str, Any], smoke: bool) ->
     n = write_train_corpus(gen(), corpus_path, max_chars=max_chars)
     if n == 0:
         raise FileNotFoundError(
-            f"No training text found under {dataset_path} or {cfg['paths']['samples_dir']}"
+            f"No training text. Run: python scripts/build_seed_corpus.py "
+            f"(looked for {manifest_path} and {dataset_path})"
         )
     return corpus_path
 

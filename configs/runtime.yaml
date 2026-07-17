@@ -1,5 +1,4 @@
-# Cloud-agnostic runtime — no RunPod/AWS imports in code.
-# Override paths via CLI or env when needed.
+# Cloud-agnostic runtime — provider lives here / CLI only, never in model code.
 
 compute:
   accelerator: cuda
@@ -15,6 +14,12 @@ storage:
   mmap: true
   processed_path: /workspace/datasets/processed
   tokenizer_out: tokenizer/latex-v0.1
+  checkpoint_root: checkpoints
 
 precision:
   tokenizer: fp32
+
+# Optional overlay (not imported by latex_tokenizer / latex models)
+provider_hints:
+  # e.g. runpod | aws | onprem — documentation only
+  default: generic

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 
 MIX_KEYS = (
@@ -44,12 +44,28 @@ def iter_text_file(path: Path) -> Iterator[str]:
 def discover_shards(dataset_path: Path) -> list[Path]:
     raw = dataset_path / "raw" / "shards"
     if raw.is_dir():
-        shards = sorted(raw.glob("*.jsonl"))
+        shards = sorted(raw.glob("**/*.jsonl"))
+        if shards:
+            return shards
+    seed = dataset_path / "seed"
+    if seed.is_dir():
+        shards = sorted(seed.glob("**/*.jsonl"))
         if shards:
             return shards
     if dataset_path.is_dir():
         return sorted(dataset_path.glob("**/*.jsonl"))
     return []
+
+
+def iter_manifest_texts(manifest: dict[str, Any], repo_root: Path) -> Iterator[str]:
+    """Yield texts following manifest shard list (all docs, bucket by bucket)."""
+    shards = manifest.get("shards") or {}
+    for bucket in (manifest.get("mix") or shards).keys():
+        meta = shards.get(bucket) or {}
+        for rel in meta.get("files") or []:
+            path = repo_root / rel
+            if path.is_file():
+                yield from iter_jsonl_shard(path)
 
 
 def iter_sample_dir(samples_dir: Path) -> Iterator[tuple[str, str]]:
@@ -74,7 +90,6 @@ def write_train_corpus(
         for text in texts:
             if not text.strip():
                 continue
-            # SP expects one sentence/doc per line; flatten newlines
             flat = " ".join(text.splitlines())
             out.write(flat + "\n")
             n += 1

@@ -96,8 +96,20 @@ May use SentencePiece **trainer library** for Unigram. Forbidden: loading pretra
 
 pad=0 … assistant=11 (see `06_TOKENIZER_DESIGN.md`). Emotion/role/tone live in IEL / Role Adapter, not tokenizer.
 
-## ADR-014 — Research Gate 0 rename
+## ADR-015 — Stage1 is Weight Genesis, not training
 
 **Status:** Accepted  
 
-Official: **NULLXES-LÆTEX Research Gate 0: Tokenizer Fertility & Representation Gate**. NHAT blocked until PASS (`07_RESEARCH_GATE_0.md`).
+`nullxes_latex_7b` first produces safetensors + `init_report.json` via `scripts/init_model.py`. Token training only after report PASS. Requirements split: Gate0 vs `requirements-stage1.txt`.
+
+## ADR-016 — Hardware provider generic
+
+**Status:** Accepted  
+
+Model YAMLs use `provider: generic`. Cloud vendor only in runtime/ops overlays.
+
+## ADR-017 — Corpus data plane before any train
+
+**Status:** Accepted  
+
+Committed `datasets/seed` + manifests. `validate_corpus.py` PASS (E001a) required before full tokenizer Gate0. Causal LM uses separate `pretrain_stage0` manifest on `datasets/raw/` — see `docs/10_CORPUS_PLAN.md`.

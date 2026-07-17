@@ -7,9 +7,11 @@ venv/
 .env
 .python-version
 
-# Training / data (never commit corpora)
-datasets/
+# Large corpora (keep seed + manifests + schema in git)
+datasets/raw/
+datasets/processed/
 checkpoints/
+!checkpoints/.gitkeep
 *.pt
 *.bin
 *.safetensors
@@ -17,7 +19,7 @@ checkpoints/
 wandb/
 runs/
 
-# Tokenizer train scratch / local smoke models (commit special_tokens.json + .gitkeep only)
+# Tokenizer train scratch
 tokenizer/**/tmp/
 tokenizer/**/*.log
 tokenizer/**/tokenizer.model

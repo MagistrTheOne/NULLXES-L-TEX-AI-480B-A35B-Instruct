@@ -1,0 +1,38 @@
+# NULLXES-LÆTEX Stage1 Weight Genesis + later training stack
+# Do NOT install for Gate0-only work. Use after tokenizer Gate0.
+# pip install -r requirements-stage1.txt
+
+-r requirements-gate0.txt
+
+# Core
+torch>=2.7.0
+torchvision
+torchaudio
+
+# Config
+omegaconf>=2.3.0
+protobuf>=5.27.0
+
+# Numerical
+scipy>=1.13.0
+
+# Training utilities
+rich>=13.7.0
+wandb>=0.17.0
+
+# Data pipeline
+datasets>=3.0.0
+pyarrow>=17.0.0
+
+# Distributed training
+accelerate>=1.0.0
+deepspeed>=0.15.0
+
+# Performance
+ninja
+packaging
+einops>=0.8.0
+
+# Validation / checkpoints
+pytest>=8.0.0
+safetensors>=0.4.0

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "nullxes-latex-corpus-record",
+  "title": "NULLXES-LÆTEX corpus JSONL record",
+  "type": "object",
+  "required": ["id", "text", "bucket"],
+  "properties": {
+    "id": { "type": "string", "minLength": 3 },
+    "text": { "type": "string", "minLength": 1 },
+    "bucket": {
+      "type": "string",
+      "enum": [
+        "multilingual",
+        "code",
+        "enterprise",
+        "scientific",
+        "synthetic_structure"
+      ]
+    },
+    "lang": { "type": "string" },
+    "source": { "type": "string" },
+    "license": { "type": "string" },
+    "split": {
+      "type": "string",
+      "enum": ["train", "valid", "test"]
+    }
+  },
+  "additionalProperties": true
+}

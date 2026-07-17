@@ -79,20 +79,30 @@ Flagship reference: **480B total / ~35B active** MoE Instruct. Spec: [`ARCHITECT
 
 ---
 
-## Quickstart — tokenizer only
+## Quickstart — corpus then tokenizer (Gate 0)
 
 ```bash
-# deps: Python 3.11+, sentencepiece, pyyaml
 pip install -r requirements.txt
-
-# train on shard mix (paths from configs/runtime.yaml)
+python scripts/scaffold_corpus.py
+python scripts/build_seed_corpus.py
+python scripts/validate_corpus.py --manifest datasets/manifests/gate0_tokenizer.json
+# only if validate PASS:
 python scripts/train_tokenizer.py --config configs/tokenizer_stage0.yaml
-
-# Gate 0 evaluation suite
 python scripts/evaluate_tokenizer.py --config configs/tokenizer_stage0.yaml
 ```
 
-Hardware: design assumes **H200 / B300** only for later stages. Tokenizer is IO-bound — see `configs/runtime.yaml` (`streaming`, `mmap`).
+Corpus plan: [`docs/10_CORPUS_PLAN.md`](docs/10_CORPUS_PLAN.md) · Product: [nullxesdai.online](https://www.nullxesdai.online/)
+
+## Stage1 Weight Genesis (after Gate0; not training yet)
+
+```bash
+pip install -r requirements-stage1.txt
+python scripts/init_model.py --config configs/nullxes_latex_7b.yaml
+```
+
+See [`docs/09_WEIGHT_GENESIS.md`](docs/09_WEIGHT_GENESIS.md).
+
+Hardware: design assumes **H200 / B300**. Paths via `configs/runtime.yaml` (`streaming`, `mmap`). Provider is **generic** in model configs.
 
 ---
 

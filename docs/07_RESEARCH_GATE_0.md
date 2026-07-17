@@ -18,6 +18,7 @@ Validates **how information is represented**, not only tokenize speed.
 
 ## Pass criteria
 
+- [ ] **Corpus E001a:** `validate_corpus.py` PASS on `datasets/manifests/gate0_tokenizer.json`
 - [ ] Vocab trains to **131072** with locked special IDs **0–11**
 - [ ] Encode/decode **deterministic**
 - [ ] Fertility + inflation thresholds pass on `tests/tokenizer_samples/`

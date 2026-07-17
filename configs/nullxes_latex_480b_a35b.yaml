@@ -1,7 +1,6 @@
-# NULLXES-LÆTEX AI 480B-A35B-Instruct (MoE)
-# ~476.0B total / ~35.1B active per token (scripts/param_count.py)
-# Init: expand from configs/nullxes_latex_a35b.yaml
-# Hardware: RunPod 256–512× B300 Instant Clusters (preferred)
+# NULLXES-LÆTEX AI 480B-A35B-Instruct (MoE) — reference until Gate0 + A35B PASS
+# ~476.0B total / ~35.1B active · Weight expand from A35B — not cold random MoE
+stage: flagship_reference
 model:
   name: nullxes-latex-480b-a35b-instruct
   architecture: nhat_moe
@@ -12,24 +11,37 @@ model:
   d_head: 128
   d_ff_dense: 22016
   d_ff_expert: 2048
-  vocab_size: 131072  # 262144 only via docs/08_VOCAB_MIGRATION.md experiment — never auto
+  vocab_size: 131072  # 262144 only via docs/08_VOCAB_MIGRATION.md — never auto
   max_seq_len_train: 32768
   max_seq_len_infer: 131072
   rope_theta: 1000000.0
+  rope_scaling:
+    enabled: true
+    target_context: 131072
   norm: rmsnorm
   activation: swiglu
-  attention: gqa  # MLA optional if KV-bound
+  attention: gqa
   hybrid_attention:
     enabled: true
     local_window: 4096
     full_every: 4
     local_rope: true
     global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.25
   dense_prefix_layers: 4
   tie_embeddings: false
   qk_norm: true
   z_loss_coeff: 1.0e-5
   no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
 
 moe:
   n_routed_experts: 152
@@ -38,12 +50,11 @@ moe:
   router: nx_sigmoid_normalize
   router_dtype: fp32
   capacity_factor: 1.25
-  load_balance: aux_loss_free_bias  # SMEBU-style
+  load_balance: aux_loss_free_bias
   aux_loss_coeff_warmup: 0.01
   aux_loss_warmup_steps: 5000
   expert_diversity_loss: true
   diversity_coeff: 1.0e-4
-  # Ranges below are POST-HOC monitoring labels after clustering — not hard binds
   expert_banks_posthoc_example:
     reasoning: [0, 15]
     coding: [16, 31]
@@ -71,7 +82,7 @@ identity_embedding_layer:
 
 init:
   scheme: expand_from_a35b
-  a35b_checkpoint: null  # set after Stage 2
+  a35b_checkpoint: null
   expert_noise: orthogonal
   noise_scale_start: 0.02
   noise_scale_end: 0.005
@@ -79,10 +90,18 @@ init:
   shared_expert_noise: false
   router_std: 0.01
   expert_bias_init: 0.0
-  mup: true
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
   expert_taxonomy: posthoc_clustering_only
 
+checkpoint:
+  format: safetensors
+  save_every_steps: 500
+  output_dir: checkpoints/nullxes-latex-480b-a35b
+
 training:
+  enabled: false
   precision: fp8
   optimizer: adamw
   beta1: 0.9
@@ -94,22 +113,28 @@ training:
   warmup_ratio: 0.01
   grad_clip: 1.0
   global_batch_tokens: 8388608
-  tokens_target: 1_500_000_000_000  # active-aligned multi-epoch OK
+  tokens_target: 1_500_000_000_000
   stop_on_expert_collapse: true
 
 alignment:
   pipeline: [sft, dpo, axo, epo]
-  persona: digital_employee  # not generic assistant
+  persona: digital_employee
 
 hardware:
-  provider: runpod
+  provider: generic
+  accelerator: cuda
   gpu: B300
-  gpus: 512
-  fallback_gpu: H200
-  fallback_gpus: 1024
+  cluster:
+    nodes: 64
+    gpus: 512
+  fallback:
+    gpu: H200
+    gpus: 1024
   parallelism:
     tp: 4
     pp: 8
     ep: 16
     cp: 2
     dp: auto
+  backend:
+    distributed: nccl

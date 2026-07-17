@@ -1,5 +1,6 @@
-# NULLXES-LÆTEX A35B-alt — deeper/narrower dense (~34B)
-# Alternate init cfg; same MoE expansion rules if width matched via projector.
+# NULLXES-LÆTEX A35B-alt — deeper/narrower (~34B)
+# Prefer nullxes_latex_a35b.yaml (d_model=8192) for zero-copy MoE expand.
+stage: a35b_alt
 model:
   name: nullxes-latex-a35b-alt
   architecture: nhat_dense
@@ -13,6 +14,9 @@ model:
   vocab_size: 131072
   max_seq_len: 32768
   rope_theta: 1000000.0
+  rope_scaling:
+    enabled: true
+    target_context: 131072
   norm: rmsnorm
   activation: swiglu
   attention: gqa
@@ -20,10 +24,42 @@ model:
     enabled: true
     local_window: 4096
     full_every: 4
+    local_rope: true
+    global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
   tie_embeddings: false
-  note: "Prefer nullxes_latex_a35b.yaml (d_model=8192) for zero-copy MoE expand."
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
+
+init:
+  scheme: mup
+  base_width: 2048
+  base_depth: 32
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 1000
+  output_dir: checkpoints/nullxes-latex-a35b-alt
 
 hardware:
-  provider: runpod
+  provider: generic
+  accelerator: cuda
   gpu: B300
-  gpus: 64
+  cluster:
+    nodes: 8
+    gpus: 64
+  backend:
+    distributed: nccl
