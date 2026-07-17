@@ -33,6 +33,7 @@ ninja
 packaging
 einops>=0.8.0
 
-# Validation / checkpoints
+# Validation / checkpoints / HF
 pytest>=8.0.0
 safetensors>=0.4.0
+transformers>=4.46.0

@@ -108,8 +108,8 @@ pad=0 … assistant=11 (see `06_TOKENIZER_DESIGN.md`). Emotion/role/tone live in
 
 Model YAMLs use `provider: generic`. Cloud vendor only in runtime/ops overlays.
 
-## ADR-017 — Corpus data plane before any train
+## ADR-018 — Transformers CausalLM surface (not island nn.Module)
 
 **Status:** Accepted  
 
-Committed `datasets/seed` + manifests. `validate_corpus.py` PASS (E001a) required before full tokenizer Gate0. Causal LM uses separate `pretrain_stage0` manifest on `datasets/raw/` — see `docs/10_CORPUS_PLAN.md`.
+Public API is `LatexConfig` / `LatexForCausalLM` / `LatexTokenizer` with Auto* registration. NHAT is internal decoder engine only. See `docs/11_TRANSFORMERS_CONTRACT.md`.

@@ -93,14 +93,16 @@ python scripts/evaluate_tokenizer.py --config configs/tokenizer_stage0.yaml
 
 Corpus plan: [`docs/10_CORPUS_PLAN.md`](docs/10_CORPUS_PLAN.md) · Product: [nullxesdai.online](https://www.nullxesdai.online/)
 
-## Stage1 Weight Genesis (after Gate0; not training yet)
+## Stage1 Weight Genesis (HF CausalLM — after Gate0)
 
 ```bash
 pip install -r requirements-stage1.txt
 python scripts/init_model.py --config configs/nullxes_latex_7b.yaml
+python scripts/smoke_hf_causal.py --checkpoint checkpoints/nullxes-latex-7b
 ```
 
-See [`docs/09_WEIGHT_GENESIS.md`](docs/09_WEIGHT_GENESIS.md).
+Public API: `LatexForCausalLM` (`model_type=latex`) — see [`docs/11_TRANSFORMERS_CONTRACT.md`](docs/11_TRANSFORMERS_CONTRACT.md).  
+NHAT is the **engine**; Transformers CausalLM is the **chassis**.
 
 Hardware: design assumes **H200 / B300**. Paths via `configs/runtime.yaml` (`streaming`, `mmap`). Provider is **generic** in model configs.
 

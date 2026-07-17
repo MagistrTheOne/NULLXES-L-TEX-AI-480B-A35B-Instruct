@@ -1,4 +1,4 @@
-"""muP / deepnorm weight initialization for Weight Genesis."""
+"""muP / deepnorm weight initialization for LÆTEX Weight Genesis."""
 
 from __future__ import annotations
 
@@ -8,7 +8,8 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from latex.models.nhat_dense import NHATDense, SwiGLUFFN, Attention
+from latex.models.attention import NHATAttention
+from latex.models.ffn import DenseSwiGLUFFN
 
 
 def _parse_residual_scale(init_cfg: dict[str, Any], n_layers: int) -> float:
@@ -16,60 +17,69 @@ def _parse_residual_scale(init_cfg: dict[str, Any], n_layers: int) -> float:
     if isinstance(rs, dict):
         expr = rs.get("value", "0.02 / sqrt(2*n_layers)")
     else:
-        expr = str(rs)
-    # Safe eval of documented formula only
+        expr = str(rs) if rs else "0.02 / sqrt(2*n_layers)"
     expr = expr.replace("n_layers", str(n_layers))
-    allowed = {"sqrt": math.sqrt, "__builtins__": {}}
-    return float(eval(expr, allowed, {}))  # noqa: S307 — controlled formula
+    return float(eval(expr, {"sqrt": math.sqrt, "__builtins__": {}}, {}))  # noqa: S307
 
 
-def apply_mup_init(model: NHATDense, init_cfg: dict[str, Any]) -> dict[str, Any]:
+def apply_mup_init(model: nn.Module, init_cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     """
-    Width-aware init:
-      std_base = init.std (default 0.02)
-      input/hidden ~ N(0, std^2)
-      residual out-projections scaled by residual_scale (deepnorm-style)
-      muP: scale LR-sensitive widths vs base_width (recorded in report)
+    Initialize LatexForCausalLM / LatexModel weights.
+    Targets: embed_tokens, layers.*.self_attn, layers.*.mlp, lm_head, norms.
     """
-    std = float(init_cfg.get("std", 0.02))
-    base_width = float(init_cfg.get("base_width", model.cfg.d_model))
-    width_mult = model.cfg.d_model / base_width
-    residual_scale = _parse_residual_scale(init_cfg, model.cfg.n_layers)
+    init_cfg = init_cfg or {}
+    std = float(init_cfg.get("std", getattr(model.config, "initializer_range", 0.02)))
+    n_layers = int(model.config.num_hidden_layers)
+    base_width = float(init_cfg.get("base_width", model.config.hidden_size))
+    width_mult = model.config.hidden_size / max(base_width, 1e-8)
+    residual_scale = _parse_residual_scale(init_cfg, n_layers)
 
     def trunc_normal_(w: torch.Tensor, s: float):
         nn.init.trunc_normal_(w, mean=0.0, std=s, a=-2 * s, b=2 * s)
 
-    with torch.no_grad():
-        trunc_normal_(model.tok_emb.weight, std)
-        if not model.cfg.tie_embeddings:
-            trunc_normal_(model.lm_head.weight, std / math.sqrt(max(width_mult, 1e-8)))
+    # Resolve backbone
+    backbone = model.model if hasattr(model, "model") and hasattr(model.model, "layers") else model
 
-        for layer in model.layers:
-            attn: Attention = layer.attn
-            ffn: SwiGLUFFN = layer.ffn
-            for lin in (attn.wq, attn.wk, attn.wv):
+    with torch.no_grad():
+        if hasattr(backbone, "embed_tokens"):
+            trunc_normal_(backbone.embed_tokens.weight, std)
+
+        if hasattr(model, "lm_head") and model.lm_head is not None:
+            if not model.config.tie_word_embeddings:
+                trunc_normal_(
+                    model.lm_head.weight, std / math.sqrt(max(width_mult, 1e-8))
+                )
+
+        for layer in backbone.layers:
+            attn: NHATAttention = layer.self_attn
+            for lin in (attn.q_proj, attn.k_proj, attn.v_proj):
                 trunc_normal_(lin.weight, std)
                 if lin.bias is not None:
                     nn.init.zeros_(lin.bias)
-            # residual out
-            trunc_normal_(attn.wo.weight, std * residual_scale)
-            if attn.wo.bias is not None:
-                nn.init.zeros_(attn.wo.bias)
-            trunc_normal_(ffn.w1.weight, std)
-            trunc_normal_(ffn.w3.weight, std)
-            trunc_normal_(ffn.w2.weight, std * residual_scale)
-            for lin in (ffn.w1, ffn.w2, ffn.w3):
-                if lin.bias is not None:
-                    nn.init.zeros_(lin.bias)
+            trunc_normal_(attn.o_proj.weight, std * residual_scale)
+            if attn.o_proj.bias is not None:
+                nn.init.zeros_(attn.o_proj.bias)
             if attn.q_norm is not None:
                 nn.init.ones_(attn.q_norm.weight)
                 nn.init.ones_(attn.k_norm.weight)
-            nn.init.ones_(layer.attn_norm.weight)
-            nn.init.ones_(layer.ffn_norm.weight)
-        nn.init.ones_(model.out_norm.weight)
+
+            mlp = layer.mlp
+            if isinstance(mlp, DenseSwiGLUFFN):
+                trunc_normal_(mlp.gate_proj.weight, std)
+                trunc_normal_(mlp.up_proj.weight, std)
+                trunc_normal_(mlp.down_proj.weight, std * residual_scale)
+                for lin in (mlp.gate_proj, mlp.up_proj, mlp.down_proj):
+                    if lin.bias is not None:
+                        nn.init.zeros_(lin.bias)
+
+            nn.init.ones_(layer.input_layernorm.weight)
+            nn.init.ones_(layer.post_attention_layernorm.weight)
+
+        if hasattr(backbone, "norm"):
+            nn.init.ones_(backbone.norm.weight)
 
     return {
-        "scheme": "mup",
+        "scheme": init_cfg.get("scheme", "mup"),
         "std": std,
         "base_width": base_width,
         "base_depth": init_cfg.get("base_depth"),
