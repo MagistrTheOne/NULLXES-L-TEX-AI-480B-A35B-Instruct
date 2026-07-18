@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Download small HF samples for local_2080 mini pretrain.
+Download licensed HF samples for Gate A proxy / local_2080 mini pretrain.
 
-  set HF_TOKEN=...   # or huggingface-cli login
-  python scripts/download_local_corpus.py --config local_2080/configs/datasets_mini.yaml
+  export HF_HUB_ENABLE_HF_TRANSFER=1   # required — no fallback
+  pip install hf_transfer
+  export HF_TOKEN=...                  # optional for public; needed for gated
+  python scripts/download_local_corpus.py --config configs/datasets_gate_a_proxy.yaml
 
+Resume: existing complete shards are skipped. Manifest rewritten at end.
 Never writes tokens to disk. No FineWeb/CC full dumps.
 """
 
@@ -27,12 +30,37 @@ def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
+def require_hf_transfer() -> None:
+    """HF_HUB_ENABLE_HF_TRANSFER=1 with no silent disable / no fallback."""
+    flag = os.environ.get("HF_HUB_ENABLE_HF_TRANSFER", "").strip()
+    if flag not in ("1", "true", "True", "yes"):
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+        _log("[env] set HF_HUB_ENABLE_HF_TRANSFER=1 (required, no fallback)")
+    try:
+        import hf_transfer  # noqa: F401
+    except ImportError as e:
+        _log("[fail] hf_transfer required but not installed.")
+        _log("  pip install -U hf_transfer")
+        raise SystemExit(1) from e
+    _log("[ok] hf_transfer ready (HF_HUB_ENABLE_HF_TRANSFER=1)")
+
+
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     return len(rows)
+
+
+def count_jsonl_lines(path: Path) -> int:
+    if not path.is_file():
+        return 0
+    n = 0
+    with path.open("rb") as f:
+        for _ in f:
+            n += 1
+    return n
 
 
 def truncate(text: str, max_chars: int) -> str:
@@ -56,6 +84,20 @@ def download_source(src: dict[str, Any], out_dir: Path, defaults: dict[str, Any]
     streaming = bool(src.get("streaming", True))
     allow_types = set(src.get("filter_open_type") or [])
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    out = out_dir / f"{src['id']}.jsonl"
+
+    # Resume: skip complete shards
+    existing = count_jsonl_lines(out)
+    if existing >= max_docs:
+        _log(f"[skip] {src['id']}: already have {existing} docs (≥{max_docs})")
+        return {
+            "id": src["id"],
+            "hub": hub,
+            "bucket": src["bucket"],
+            "file": str(out.relative_to(ROOT).as_posix()),
+            "docs": existing,
+            "resumed": True,
+        }
 
     _log(f"[dl] {src['id']}: {hub}" + (f"/{config}" if config else "") + f" n≤{max_docs}")
 
@@ -102,7 +144,6 @@ def download_source(src: dict[str, Any], out_dir: Path, defaults: dict[str, Any]
         if len(rows) >= max_docs:
             break
 
-    out = out_dir / f"{src['id']}.jsonl"
     n = write_jsonl(out, rows)
     _log(f"[ok] {out.relative_to(ROOT)} docs={n} scanned={scanned}")
     return {
@@ -111,6 +152,7 @@ def download_source(src: dict[str, Any], out_dir: Path, defaults: dict[str, Any]
         "bucket": src["bucket"],
         "file": str(out.relative_to(ROOT).as_posix()),
         "docs": n,
+        "resumed": False,
     }
 
 
@@ -122,7 +164,6 @@ def merge_manifest(cfg: dict[str, Any], shard_infos: list[dict[str, Any]]) -> Pa
         buckets[b]["files"].append(info["file"])
         buckets[b]["docs"] += info["docs"]
 
-    # Pull identity / seed from existing pretrain_stage0 if enabled
     local = cfg.get("local_identity") or {}
     if local.get("enabled"):
         man_path = ROOT / local["manifest"]
@@ -133,15 +174,15 @@ def merge_manifest(cfg: dict[str, Any], shard_infos: list[dict[str, Any]]) -> Pa
                 for f in shard.get("files") or []:
                     if f not in buckets[b]["files"]:
                         buckets[b]["files"].append(f)
-                # recount lightly: keep additive estimate
                 buckets[b]["docs"] += int(shard.get("docs") or 0)
 
     man = {
         "name": cfg["name"],
         "version": cfg.get("version", "0.1"),
-        "hardware": "local_2080",
-        "mix_note": "HF mini samples + local identity; no FineWeb",
+        "hardware": "runpod_or_local",
+        "mix_note": "HF Gate A proxy + local identity; no FineWeb; hf_transfer required",
         "shards": buckets,
+        "sources_ok": [i["id"] for i in shard_infos],
     }
     out = ROOT / cfg["manifest"]
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -155,6 +196,8 @@ def main() -> int:
     p.add_argument("--config", default="local_2080/configs/datasets_mini.yaml")
     args = p.parse_args()
 
+    require_hf_transfer()
+
     if not (os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")):
         _log("[warn] HF_TOKEN not set — public datasets may still work; gated ones will fail")
 
@@ -166,16 +209,23 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     defaults = cfg.get("defaults") or {}
 
-    infos = []
+    infos: list[dict[str, Any]] = []
+    failed: list[str] = []
     for src in cfg["sources"]:
         try:
             infos.append(download_source(src, out_dir, defaults))
+            # rewrite manifest after each source so a crash mid-run is recoverable
+            merge_manifest(cfg, infos)
         except Exception as e:
             _log(f"[fail] {src['id']}: {e}")
+            failed.append(src["id"])
+            if infos:
+                merge_manifest(cfg, infos)
             return 1
 
     merge_manifest(cfg, infos)
-    _log("[done] next: python scripts/train_stage0a.py --config local_2080/configs/latex_50m_2080.yaml")
+    _log(f"[done] sources={len(infos)} failed={failed}")
+    _log("next: python scripts/validate_corpus.py --manifest " + cfg["manifest"])
     return 0
 
 

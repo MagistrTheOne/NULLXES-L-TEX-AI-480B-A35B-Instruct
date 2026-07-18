@@ -11,33 +11,33 @@ Real Gate A (10 GB clean tree) still needs `build_clean_manifest.py` / `gate_cor
 
 ---
 
-## 0) Sync
+## 0) Sync + hf_transfer (required, no fallback)
 
 ```bash
 cd /workspace/NULLXES-L-TEX-AI-480B-A35B-Instruct
 git pull
-# HF token if gated datasets later
-export HF_TOKEN=hf_...   # optional for public wiki/peS2o
+
+# REQUIRED — do not unset / do not disable transfer
+pip install -U hf_transfer
+export HF_HUB_ENABLE_HF_TRANSFER=1
+# token already in env on pod if set; else:
+# export HF_TOKEN=hf_...
 ```
 
 ---
 
-## Gate A — proxy corpus
+## Gate A — proxy corpus (run step-by-step; wait for download)
 
 ```bash
-# identity + rules (already done if v0.1.2 fresh)
 python scripts/build_identity_corpus.py
 
-# download licensed HF samples → merge with identity
+# resume-safe: skips complete shards (e.g. pes2o already done)
 python scripts/download_local_corpus.py --config configs/datasets_gate_a_proxy.yaml
 
-# validate manifests
-python scripts/validate_corpus.py --manifest datasets/manifests/pretrain_stage0.json
+# ONLY after download prints [done]:
 python scripts/validate_corpus.py --manifest datasets/manifests/corpus_gate_a_proxy.json
-
-# size check (proxy bar — grow toward 10GB)
-du -sh datasets/raw/shards/hf_gate_a datasets/raw/shards/identity
-wc -l datasets/manifests/corpus_gate_a_proxy.json
+du -sh datasets/raw/shards/hf_gate_a
+ls -la datasets/raw/shards/hf_gate_a/
 ```
 
 Proxy PASS signal: shards exist, validate OK, wiki/ru+en+science+code+identity present.  
