@@ -110,17 +110,26 @@ eval:
     - summarization
   report_dir: evals/reports/stage2_20b
 
+# Inference ≠ training. 1× RTX PRO 6000 96GB: infer ~30–40B FP16 / ~70B INT8 / ~150B FP4.
+# AdamW bf16 train needs ~12–16 B/param + acts → 20B needs ZeRO-3 / offload / small microbatch.
+# Stage now: single Blackwell PRO 6000 smoke+real train. Later: H100/H200 cluster scale-out.
 hardware:
   provider: runpod
   accelerator: cuda
-  gpu: H200
+  gpu: RTX_PRO_6000
+  vram_gb: 96
   cluster:
     nodes: 1
-    gpus: 8
+    gpus: 1
   parallelism:
-    tp: 2
-    pp: 2
-    dp: 2
+    tp: 1
+    pp: 1
+    dp: 1
   backend:
     distributed: nccl
+    zero_stage: 3          # required for ~20B AdamW on 96GB
+    cpu_offload: true      # optimizer/param offload if VRAM tight
+  scale_later:
+    gpu: H100             # or H200 — after PRO 6000 path proven
+    gpus: 8
     zero_stage: 3
