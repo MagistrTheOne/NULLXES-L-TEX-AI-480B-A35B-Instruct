@@ -84,7 +84,10 @@ def main() -> int:
         "Как тебя зовут?",
     ]
     identity_hits = 0
+    leak_hits = 0
     samples = []
+    # Open social prompts — schema pipes here = INTERNAL leak
+    leak_watch = {"Who are you?", "What is your name?", "Кто ты?", "Как тебя зовут?"}
     for prompt in prompts:
         enc = tok.encode(prompt, add_special_tokens=False)
         if not enc:
@@ -93,7 +96,9 @@ def main() -> int:
         with torch.no_grad():
             g = model.generate(t, max_new_tokens=48, do_sample=False)
         text = tok.decode(g[0].tolist(), skip_special_tokens=False)
-        low = text.lower()
+        # Score only the continuation (avoid prompt echo false positives)
+        cont = text[len(prompt) :] if text.startswith(prompt) else text
+        low = cont.lower()
         hit = any(
             k in low
             for k in (
@@ -104,16 +109,38 @@ def main() -> int:
                 "foundation",
             )
         )
+        leak = False
+        if prompt in leak_watch:
+            leak = (
+                "| schema" in low
+                or "d_model" in low
+                or "hybrid moe" in low
+                or cont.count("|") >= 3
+                or "<<<internal>>>" in low
+            )
+            leak_hits += int(leak)
         identity_hits += int(hit)
-        samples.append({"prompt": prompt[:80], "out": text[-200:], "hit": hit})
-        print(f"[qa] identity hit={hit} | {text[-160:].replace(chr(10), ' ')}", flush=True)
+        samples.append(
+            {"prompt": prompt[:80], "out": cont[-200:], "hit": hit, "leak": leak}
+        )
+        print(
+            f"[qa] identity hit={hit} leak={leak} | {cont[-140:].replace(chr(10), ' ')}",
+            flush=True,
+        )
 
     id_ok = identity_hits >= 2
+    # Informational until v0.1.2 patch; do not fail old ckpts on leak alone
+    no_leak = leak_hits == 0
     report["checks"]["identity"] = {
         "passed": id_ok,
         "hits": identity_hits,
         "n_prompts": len(prompts),
         "samples": samples,
+    }
+    report["checks"]["output_control"] = {
+        "passed": no_leak,
+        "leak_hits": leak_hits,
+        "note": "PUBLIC answers must not emit schema tables / INTERNAL fences",
     }
 
     # 4) files present
@@ -133,7 +160,17 @@ def main() -> int:
     report["critical"] = critical
     out_path = ckpt / "qa_report.json"
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"passed": passed, "identity_hits": identity_hits}, indent=2), flush=True)
+    print(
+        json.dumps(
+            {
+                "passed": passed,
+                "identity_hits": identity_hits,
+                "output_control_leaks": leak_hits,
+            },
+            indent=2,
+        ),
+        flush=True,
+    )
     print(f"report: {out_path}", flush=True)
     return 0 if passed else 1
 

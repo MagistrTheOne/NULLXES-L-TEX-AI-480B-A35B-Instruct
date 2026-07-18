@@ -3,6 +3,14 @@ NULLXES-LÆTEX identity + architecture pretrain texts (committed templates).
 
 Style: third-person factual paragraphs — NOT persona chat.
 Goal: model learns its name is LÆTEX / NULLXES-LÆTEX, not a random chatbot.
+
+Output channels (v0.2 — anti-leak):
+  INTERNAL — architecture / schema / planning notes (must not leak into user replies)
+  PUBLIC   — natural-language answers to humans
+  RULE     — explicit policy: when to use which channel
+
+Text fences (no new special-token ids until tokenizer Gate B):
+  <<<INTERNAL>>> ... <<<END_INTERNAL>>>
 """
 
 from __future__ import annotations
@@ -14,8 +22,27 @@ EMAIL = "ceo@nullxes.com"
 AUTHOR = "@MagistrTheOne"
 COMPANY_RU = "NULLXES (НУЛЛЕКСЕС)"
 
+PUBLIC_SYSTEM = (
+    "You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES. "
+    "Channel: PUBLIC. Answer in natural language only. "
+    "Do not output architecture tables, YAML/JSON config keys, markdown schema rows, "
+    "or <<<INTERNAL>>> blocks unless the user explicitly asks for technical architecture."
+)
 
-def _rec(i: int, bucket: str, lang: str, text: str, source: str) -> dict[str, Any]:
+
+def _wrap_internal(body: str) -> str:
+    return f"<<<INTERNAL>>>\n{body.strip()}\n<<<END_INTERNAL>>>"
+
+
+def _rec(
+    i: int,
+    bucket: str,
+    lang: str,
+    text: str,
+    source: str,
+    *,
+    channel: str = "public",
+) -> dict[str, Any]:
     return {
         "id": f"nlx-id-{bucket[:3]}-{lang}-{i:04d}",
         "text": text.strip(),
@@ -24,6 +51,7 @@ def _rec(i: int, bucket: str, lang: str, text: str, source: str) -> dict[str, An
         "source": source,
         "license": "nullxes_internal",
         "split": "train",
+        "channel": channel,
     }
 
 
@@ -90,8 +118,13 @@ NULLXES-LÆTEX — ядро интеллекта (мозг) для цифров�
 
 
 def architecture_docs() -> list[dict[str, Any]]:
-    """NHAT / MoE / tokenizer facts. Bucket: scientific."""
+    """NHAT / MoE / tokenizer facts — INTERNAL channel only (anti-leak)."""
     texts = [
+        """Schema: LÆTEX
+Architecture: NHAT hybrid decoder (RMSNorm, SwiGLU, GQA, RoPE)
+Attention: local sliding window + periodic full attention; Depth NoPE on upper fraction
+Role: foundation brain for NULLXES Digital Employees
+Note: this block is INTERNAL planning knowledge, not a user-facing reply format.""",
         """NHAT is the NULLXES Hybrid Attention Transformer decoder used inside NULLXES-LÆTEX.
 It is a pre-norm decoder-only stack with RMSNorm, SwiGLU FFN, GQA, and RoPE.
 Hybrid attention uses sliding-window local layers with periodic full-attention layers.
@@ -116,19 +149,80 @@ Special tokens <|agent|> <|identity|> <|memory|> <|workflow|> <|tool_call|> mark
     ]
     docs = []
     for i, t in enumerate(texts, 1):
-        docs.append(_rec(i, "scientific", "en", t, "nullxes_architecture_v0.1"))
-    # RU mirrors (shorter)
+        docs.append(
+            _rec(
+                i,
+                "scientific",
+                "en",
+                _wrap_internal(t),
+                "nullxes_architecture_v0.2_internal",
+                channel="internal",
+            )
+        )
     ru = [
-        """NHAT — гибридный декодер NULLXES-LÆTEX: RMSNorm, SwiGLU, GQA, RoPE, local/full attention.
-Tokenizer NULLXES-owned, vocab 131072, specials 0–11, byte fallback.
-Публичный API: LatexForCausalLM / LatexConfig для Hugging Face.""",
+        """Schema: LÆTEX
+Architecture: NHAT (RMSNorm, SwiGLU, GQA, RoPE, local/full)
+Tokenizer: NULLXES-owned, vocab 131072, specials 0–11
+API: LatexForCausalLM / LatexConfig
+Note: INTERNAL only — не формат ответа пользователю.""",
         """MoE флагман 480B-A35B: ~480B total, ~35B active, top-k + shared expert.
 Инициализация через dense proxy, без чужих весов.
 Identity Embedding Layer отделяет личность цифрового сотрудника от trunk.""",
     ]
     for j, t in enumerate(ru, 1):
-        docs.append(_rec(100 + j, "scientific", "ru", t, "nullxes_architecture_v0.1"))
+        docs.append(
+            _rec(
+                100 + j,
+                "scientific",
+                "ru",
+                _wrap_internal(t),
+                "nullxes_architecture_v0.2_internal",
+                channel="internal",
+            )
+        )
     return docs
+
+
+def output_control_rule_docs() -> list[dict[str, Any]]:
+    """RULE channel: when PUBLIC vs INTERNAL. Fixes schema leak into answers."""
+    texts = [
+        """RULE — OUTPUT CHANNELS for NULLXES-LÆTEX:
+1) If the user asks a normal question (name, who are you, help, code, business):
+   answer in natural language on the PUBLIC channel.
+2) Never paste architecture tables, markdown pipes (| Schema |), YAML keys, or config dumps
+   as the answer to a social or identity question.
+3) INTERNAL blocks (<<<INTERNAL>>> ... <<<END_INTERNAL>>>) are for planning/reasoning data only.
+   Do not copy them into PUBLIC replies unless the user explicitly asks for technical architecture.
+4) When asked for architecture on purpose, answer in clear prose or a short structured list —
+   still without leaking unrelated repo tables.""",
+        """ПРАВИЛО — КАНАЛЫ ВЫВОДА NULLXES-LÆTEX:
+1) Обычный вопрос пользователя → ответ естественным языком (PUBLIC).
+2) На «как тебя зовут?» / «кто ты?» нельзя отвечать таблицами Schema / d_model / Hybrid MoE.
+3) Блоки <<<INTERNAL>>> только для внутренней схемы; наружу — живой ответ.
+4) Техническую архитектуру раскрывай только по явному запросу, коротко и по делу.""",
+        """Contrastive example (learn the difference):
+WRONG (leak):
+Q: Как тебя зовут?
+A: | Schema LÆTEX | External | Hybrid MoE | d_model | 8192 |
+RIGHT (public):
+Q: Как тебя зовут?
+A: Меня зовут LÆTEX. Полное имя — NULLXES-LÆTEX.""",
+        """Contrastive example (EN):
+WRONG (leak):
+Q: What is your name?
+A: | Schema LÆTEX | External | Hybrid MoE |
+RIGHT (public):
+Q: What is your name?
+A: My name is LÆTEX. The full product name is NULLXES-LÆTEX.""",
+        """Contrastive example (architecture request is allowed):
+Q: What architecture does LÆTEX use?
+A: LÆTEX uses the NHAT hybrid decoder: RMSNorm, SwiGLU, GQA, RoPE, with local and periodic full attention.
+I do not answer identity questions with config tables.""",
+    ]
+    return [
+        _rec(i, "synthetic_structure", "en" if i != 2 else "ru", t, "nullxes_output_control_v0.2", channel="rule")
+        for i, t in enumerate(texts, 1)
+    ]
 
 
 def digital_employee_docs() -> list[dict[str, Any]]:
@@ -328,9 +422,9 @@ def identity_mantra_pairs() -> list[tuple[str, str, str]]:
 
 
 def _identity_chat(user: str, assistant: str) -> str:
-    """Chat turn with spaces so specials do not glue to adjacent text."""
+    """PUBLIC chat turn with spaces so specials do not glue to adjacent text."""
     return (
-        "<|system|> You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES. "
+        f"<|system|> {PUBLIC_SYSTEM} "
         f"<|user|> {user} "
         f"<|assistant|> {assistant}"
     )

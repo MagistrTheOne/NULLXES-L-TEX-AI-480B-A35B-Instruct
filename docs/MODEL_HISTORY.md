@@ -59,6 +59,25 @@ Same repo; optional commit `v0.1.1-continue` when packaging again.
 
 ---
 
+## v0.1.2 — Output channels (INTERNAL / PUBLIC / RULE) — planned patch
+
+| Field | Value |
+|-------|-------|
+| Status | corpus wired; short continue ~25M tok |
+| Config | `configs/stage0a_100m_output_control_patch.yaml` |
+| Fix | Architecture behind `<<<INTERNAL>>>`; PUBLIC mantras + RULE contrastives; no raw `docs/*.md` in code pack |
+| Pass when | identity still ≥8/9 **and** open RU/EN name prompts have **zero** markdown schema pipes |
+
+### Channels (LÆTEX brain — not employee persona modes)
+
+- **INTERNAL** — schema / NHAT / MoE planning  
+- **PUBLIC** — natural answers to humans  
+- **RULE** — when to use which  
+
+Employee overlays (Anna etc.) are a different product layer — not this Stage0 patch.
+
+---
+
 ## Template for later entries
 
 ```

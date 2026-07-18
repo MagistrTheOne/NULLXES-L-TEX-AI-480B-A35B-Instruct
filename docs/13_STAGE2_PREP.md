@@ -32,6 +32,9 @@ No gate → no next gate. No YAML-only jumps.
 | Change / schedule 480B training now | **DROP** | User lock: cluster later |
 | Force vocab=131072 without ablation | **DROP** | Let data win |
 | Skip Gate C (100M eval) before 20B | **DROP** | Need non-identity competence signal |
+| Mix raw docs/md/yaml tables into Stage0 code pack | **DROP** | Schema leak into PUBLIC answers |
+| INTERNAL/PUBLIC/RULE output channels | **KEEP** | Keep arch knowledge; stop speaking as config.json |
+| Employee persona mode-switch (Anna etc.) on LÆTEX trunk | **DROP here** | IEL / product layer later — not Stage0a |
 
 ---
 

@@ -13,9 +13,10 @@
       "files": [
         "datasets/seed/multilingual/seed_0001.jsonl",
         "datasets/raw/shards/identity/nullxes_identity.jsonl",
-        "datasets/raw/shards/identity/identity_mantra.jsonl"
+        "datasets/raw/shards/identity/identity_mantra.jsonl",
+        "datasets/raw/shards/identity/output_control_rules.jsonl"
       ],
-      "docs": 88
+      "docs": 93
     },
     "code": {
       "files": [
@@ -25,7 +26,7 @@
         "datasets/raw/shards/code/backend.jsonl",
         "datasets/raw/shards/code/infrastructure.jsonl"
       ],
-      "docs": 266
+      "docs": 262
     },
     "enterprise": {
       "files": [
@@ -41,7 +42,7 @@
         "datasets/raw/shards/identity/latex_architecture.jsonl",
         "datasets/raw/shards/reasoning/technical_reasoning.jsonl"
       ],
-      "docs": 31
+      "docs": 32
     },
     "synthetic_structure": {
       "files": [
@@ -53,10 +54,10 @@
     }
   },
   "totals": {
-    "multilingual": 88,
-    "code": 266,
+    "multilingual": 93,
+    "code": 262,
     "enterprise": 31,
-    "scientific": 31,
+    "scientific": 32,
     "synthetic_structure": 98
   },
   "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT.",

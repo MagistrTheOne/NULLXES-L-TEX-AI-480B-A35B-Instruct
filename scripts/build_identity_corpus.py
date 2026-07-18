@@ -36,6 +36,7 @@ from latex_data.identity_corpus import (  # noqa: E402
     enterprise_ai_docs,
     identity_docs,
     identity_mantra_docs,
+    output_control_rule_docs,
     sft_identity_examples,
     technical_reasoning_docs,
 )
@@ -59,7 +60,8 @@ SKIP_DIR_NAMES = {
     "agent-transcripts",
 }
 SKIP_FILE_PARTS = {".env", "secrets", "credentials", ".pem", ".key"}
-CODE_SUFFIXES = {".py", ".ts", ".tsx", ".md", ".yaml", ".yml", ".json", ".toml"}
+# Code only — docs/md/yaml/json tables were leaking into PUBLIC identity answers.
+CODE_SUFFIXES = {".py", ".ts", ".tsx", ".toml"}
 MAX_FILE_BYTES = 80_000
 MAX_CODE_FILES = 120
 
@@ -158,6 +160,7 @@ def build_manifests(repo: Path) -> None:
         "multilingual": [
             "datasets/raw/shards/identity/nullxes_identity.jsonl",
             "datasets/raw/shards/identity/identity_mantra.jsonl",
+            "datasets/raw/shards/identity/output_control_rules.jsonl",
         ],
         "code": [
             "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
@@ -235,6 +238,9 @@ def main() -> int:
     n_id = write_jsonl(raw / "identity" / "nullxes_identity.jsonl", identity_docs())
     n_mantra = write_jsonl(raw / "identity" / "identity_mantra.jsonl", identity_mantra_docs())
     n_arch = write_jsonl(raw / "identity" / "latex_architecture.jsonl", architecture_docs())
+    n_rules = write_jsonl(
+        raw / "identity" / "output_control_rules.jsonl", output_control_rule_docs()
+    )
     n_de = write_jsonl(raw / "docs" / "digital_employee.jsonl", digital_employee_docs())
     n_ent = write_jsonl(raw / "docs" / "enterprise_ai.jsonl", enterprise_ai_docs())
     n_rea = write_jsonl(raw / "reasoning" / "technical_reasoning.jsonl", technical_reasoning_docs())
@@ -249,13 +255,8 @@ def main() -> int:
         or "/src/latex" in r["path"]
         or r["path"].startswith("scripts/")
     ]
-    infra = [
-        r
-        for r in code_all
-        if r["path"].endswith((".yaml", ".yml", ".toml", ".json", ".md"))
-        or r["path"].startswith("configs/")
-        or r["path"].startswith("docs/")
-    ]
+    # configs/docs are NOT packed as raw code (schema leak). Infra = toml + explicit stub.
+    infra = [r for r in code_all if r["path"].endswith(".toml")]
     # If no frontend in this repo, write placeholder factual stub (not empty file)
     if not frontend:
         frontend = [
@@ -276,10 +277,31 @@ def main() -> int:
             }
         ]
 
+    if not infra:
+        infra = [
+            {
+                "id": "nlx-code-infra-0001",
+                "text": (
+                    "File: _meta/infra_channel_note.txt\n\n"
+                    "Description:\nConfigs and research markdown are INTERNAL knowledge. "
+                    "They are not mixed into open PUBLIC pretrain shards as raw tables.\n\n"
+                    "Code:\n\n"
+                    "# LÆTEX: PUBLIC answers = natural language; "
+                    "architecture tables stay behind <<<INTERNAL>>> fences.\n"
+                ),
+                "lang": "code",
+                "bucket": "code",
+                "source": "nullxes_repo_clean_v0.2",
+                "license": "nullxes_internal",
+                "split": "train",
+                "path": "_meta/infra_channel_note.txt",
+            }
+        ]
+
     n_code = write_jsonl(raw / "code" / "nullxes_repo_clean.jsonl", code_all)
     n_fe = write_jsonl(raw / "code" / "frontend.jsonl", frontend)
     n_be = write_jsonl(raw / "code" / "backend.jsonl", backend or code_all[:5])
-    n_inf = write_jsonl(raw / "code" / "infrastructure.jsonl", infra or code_all[:5])
+    n_inf = write_jsonl(raw / "code" / "infrastructure.jsonl", infra)
 
     n_sft = write_jsonl(repo / "datasets" / "sft" / "identity_v0.1.jsonl", sft_identity_examples())
 
@@ -292,6 +314,7 @@ def main() -> int:
                     "identity": n_id,
                     "identity_mantra": n_mantra,
                     "architecture": n_arch,
+                    "output_control_rules": n_rules,
                     "digital_employee": n_de,
                     "enterprise_ai": n_ent,
                     "reasoning": n_rea,
