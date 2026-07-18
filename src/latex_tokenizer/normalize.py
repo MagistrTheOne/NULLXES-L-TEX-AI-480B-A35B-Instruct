@@ -14,6 +14,9 @@ def normalize_text(text: str, form: str = "NFKC") -> str:
     """NFKC normalize while keeping emails/URLs as contiguous spans."""
     if not text:
         return text
+    # Drop NULs (wiki/binary junk) — SentencePiece warns otherwise
+    if "\x00" in text:
+        text = text.replace("\x00", "")
     emails = _EMAIL.findall(text)
     urls = _URL.findall(text)
     out = unicodedata.normalize(form, text)

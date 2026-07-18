@@ -225,16 +225,22 @@ def train_tokenizer(
 
 
 def load_owned_processor(artifact_dir: Path):
-    """Load NULLXES-owned tokenizer.model from versioned directory only."""
+    """Load NULLXES-owned tokenizer.model from versioned / ablation dirs only."""
     import sentencepiece as spm
 
     model_path = artifact_dir / "tokenizer.model"
     if not model_path.is_file():
         raise FileNotFoundError(f"Missing {model_path} — run train_tokenizer.py first")
-    # Refuse paths that look like foreign dumps
-    if "latex-v" not in artifact_dir.as_posix():
+    # Refuse foreign dumps; allow latex-v* and Gate B ablation outputs
+    posix = artifact_dir.resolve().as_posix()
+    allowed = (
+        "latex-v" in posix
+        or "/tokenizer/ablation/" in posix
+        or posix.rstrip("/").endswith("/tokenizer/ablation")
+    )
+    if not allowed:
         raise PretrainedLoadForbidden(
-            f"Refusing to load tokenizer outside versioned latex-v* dir: {artifact_dir}"
+            f"Refusing to load tokenizer outside latex-v* / ablation dir: {artifact_dir}"
         )
     sp = spm.SentencePieceProcessor()
     sp.load(str(model_path))
