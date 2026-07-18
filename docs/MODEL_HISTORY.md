@@ -97,6 +97,22 @@ Gate A corpus-v0.2 → Gate B tokenizer → Gate C broader 100M eval → Gate D 
 
 ---
 
+## Tokenizer v0.2 — Gate B ablation PASS (2026-07-19)
+
+| Field | Value |
+|-------|-------|
+| Corpus | Gate A proxy (`corpus_gate_a_proxy`, ~368MB HF shards + identity) |
+| Ablation | 32k FAIL · 64k/96k/131072 PASS |
+| **Winner** | **131072** full Unigram (`vocab_padded: false`) |
+| Freeze | `tokenizer/latex-v0.2/` |
+| Hub | upload as `MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2` — **not** into 100M Stage0a |
+
+vs v0.1: smoke Unigram ~3.5k pieces + unused pad → v0.2 real 131072 pieces on wiki/science/code mix.
+
+100M Stage0a remains on **v0.1**. 20B+ uses **v0.2 only**.
+
+---
+
 ## Template for later entries
 
 ```

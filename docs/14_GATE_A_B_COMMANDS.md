@@ -57,16 +57,52 @@ python scripts/run_tokenizer_ablation.py \
 cat tokenizer/ablation/summary.json
 ```
 
-Freeze winner (example 64k — pick by summary, not habit):
+### Ablation result (2026-07-19 Gate A proxy)
+
+| vocab | Gate0 passed | note |
+|------:|:------------:|------|
+| 32k | FAIL | markdown fertility |
+| 64k | PASS | smallest PASS |
+| 96k | PASS | better EN/RU |
+| **131072** | **PASS** | **WINNER** — full Unigram fill, no unused_* pad; matches 20B/A35B width |
+
+Freeze winner:
 
 ```bash
+rm -rf tokenizer/latex-v0.2
 mkdir -p tokenizer/latex-v0.2
-cp -r tokenizer/ablation/v64000/* tokenizer/latex-v0.2/
-# edit meta.json: set vocab_size_chosen + note why
+cp -a tokenizer/ablation/v131072/. tokenizer/latex-v0.2/
+# strip bulky train tmp from freeze
+rm -rf tokenizer/latex-v0.2/tmp
+python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path("tokenizer/latex-v0.2/meta.json")
+m = json.loads(p.read_text())
+m["frozen_as"] = "latex-v0.2"
+m["ablation_winner"] = 131072
+m["note"] = "Gate B winner on corpus_gate_a_proxy; full 131072 Unigram; Stage0a 100M stays on v0.1"
+p.write_text(json.dumps(m, indent=2) + "\n")
+PY
 
-# final eval (no --smoke)
 python scripts/evaluate_tokenizer.py --config configs/tokenizer_latex_v0.2.yaml
-# if artifact_dir in yaml still points to latex-v0.2 — OK after freeze
+```
+
+### Hub upload (do NOT overwrite 100M Stage0a tokenizer)
+
+100M model [NULLXES-L-TEX-100M-Stage0a-v0.1](https://huggingface.co/MagistrTheOne/NULLXES-L-TEX-100M-Stage0a-v0.1) was trained with **v0.1** — replacing its `tokenizer.model` breaks the brain.
+
+Upload v0.2 as its own Hub repo:
+
+```bash
+# create once: huggingface-cli repo create NULLXES-L-TEX-Tokenizer-v0.2 --type model
+huggingface-cli upload MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2 \
+  tokenizer/latex-v0.2 . \
+  --commit-message "NULLXES-LÆTEX Tokenizer v0.2 (131072 Unigram, Gate B winner)"
+
+# optional: also stash ablation summary next to it
+huggingface-cli upload MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2 \
+  tokenizer/ablation/summary.json ablation_summary.json
 ```
 
 Single-size train (no ablation):
