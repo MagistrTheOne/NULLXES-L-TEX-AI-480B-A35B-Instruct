@@ -59,14 +59,29 @@ Same repo; optional commit `v0.1.1-continue` when packaging again.
 
 ---
 
-## v0.1.2 — Output channels (INTERNAL / PUBLIC / RULE) — planned patch
+## v0.1.2 — Output channels (INTERNAL / PUBLIC / RULE) — PASS
 
 | Field | Value |
 |-------|-------|
-| Status | corpus wired; short continue ~25M tok |
+| Date | 2026-07-19 |
+| Status | **PASS** |
 | Config | `configs/stage0a_100m_output_control_patch.yaml` |
-| Fix | Architecture behind `<<<INTERNAL>>>`; PUBLIC mantras + RULE contrastives; no raw `docs/*.md` in code pack |
-| Pass when | identity still ≥8/9 **and** open RU/EN name prompts have **zero** markdown schema pipes |
+| Tokens this pass | ~25.0M (381 steps) |
+| Final train loss | ~0.005 |
+| QA identity | **9/9** |
+| QA output_control_leaks | **0** |
+| Checkpoint | `checkpoints/nullxes-latex-100m-stage0a-rtxpro6000` |
+
+### What fixed
+
+- Open RU: `Как тебя зовут?` → `Меня зовут LÆTEX. Полное имя — NULLXES-LÆTEX.` (no schema pipes)  
+- Architecture behind `<<<INTERNAL>>>`; PUBLIC mantras + RULE contrastives  
+- Raw `docs/*.md` / yaml removed from code pack  
+
+### Still true
+
+- Holdout forward loss ~11 → still a memorizer, not general LM  
+- soft_id mix stayed high (~62%) during patch — OK for this stage; Gate A corpus is next for competence  
 
 ### Channels (LÆTEX brain — not employee persona modes)
 
@@ -75,6 +90,10 @@ Same repo; optional commit `v0.1.1-continue` when packaging again.
 - **RULE** — when to use which  
 
 Employee overlays (Anna etc.) are a different product layer — not this Stage0 patch.
+
+### Next
+
+Gate A corpus-v0.2 → Gate B tokenizer → Gate C broader 100M eval → Gate D 20B genesis on 1× RTX PRO 6000.
 
 ---
 
