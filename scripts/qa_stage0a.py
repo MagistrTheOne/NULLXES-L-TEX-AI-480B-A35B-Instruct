@@ -77,6 +77,11 @@ def main() -> int:
         "The short name of the model is",
         "Краткое имя модели:",
         "<|system|>You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES.<|user|>Who are you?<|assistant|>",
+        "Who are you?",
+        "What is your name?",
+        "Who developed you?",
+        "Кто ты?",
+        "Как тебя зовут?",
     ]
     identity_hits = 0
     samples = []

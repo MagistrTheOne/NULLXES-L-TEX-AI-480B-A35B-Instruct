@@ -1,0 +1,92 @@
+# Continue 50M on 2080 with hard identity mantra (~1.5%) + loss weight
+# Resume from previous latex-50m run. ~100M tokens ≈ overnight on 2080 SUPER.
+stage: local_2080_identity_v1
+model:
+  name: nullxes-latex-local-50m-2080-idv1
+  architecture: nhat_dense
+  n_layers: 8
+  d_model: 256
+  n_heads: 8
+  n_kv_heads: 2
+  d_head: 32
+  d_ff: 688
+  vocab_size: 131072
+  max_seq_len: 512
+  rope_theta: 10000.0
+  rope_scaling:
+    enabled: false
+    target_context: 512
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: false
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.0
+  tie_embeddings: true
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
+
+init:
+  scheme: mup
+  base_width: 256
+  base_depth: 8
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 100
+  output_dir: checkpoints/local_2080/latex-50m-idv1
+
+training:
+  enabled: true
+  precision: fp16
+  gradient_checkpointing: true
+  resume_from: checkpoints/local_2080/latex-50m
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  # lower LR for continue
+  lr: 2.0e-4
+  schedule: wsd
+  warmup_ratio: 0.03
+  grad_clip: 1.0
+  seq_len: 256
+  micro_batch_size: 1
+  grad_accum_steps: 32
+  tokens_target: 100_000_000
+  log_every: 10
+  # soft identity paragraphs in pool
+  identity_upsample: 8
+  # ~1.5% of microbatches = hard mantra Q/A (repeats as mantra)
+  mantra_mix: 0.015
+  # extra soft identity chance on top
+  soft_identity_mix: 0.02
+  # loss weights (mantra slightly hotter)
+  identity_loss_weight: 1.35
+  mantra_loss_weight: 1.75
+  corpus_manifest: datasets/manifests/pretrain_local_2080.json
+  release_name: NULLXES-LÆTEX-50M-Local2080-idv1
+
+hardware:
+  provider: local
+  accelerator: cuda
+  gpu: RTX_2080_SUPER
+  vram_gb: 8
+  cluster:
+    nodes: 1
+    gpus: 1

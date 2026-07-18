@@ -3,9 +3,13 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-2080/
 venv/
 .env
 .python-version
+
+# HF / torch local caches (never commit)
+.cache/
 
 # Large corpora (keep seed + manifests + schema in git)
 datasets/raw/

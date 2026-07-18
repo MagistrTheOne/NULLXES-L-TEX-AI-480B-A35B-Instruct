@@ -1,31 +1,40 @@
 {
-  "name": "pretrain_stage0",
-  "version": "0.2-identity",
-  "mix": {
-    "multilingual": 0.4,
-    "code": 0.25,
-    "enterprise": 0.2,
-    "scientific": 0.1,
-    "synthetic_structure": 0.05
-  },
+  "name": "latex-local-2080-mini-v0",
+  "version": "0.2",
+  "hardware": "local_2080",
+  "mix_note": "HF mini samples + local identity; no FineWeb",
   "shards": {
+    "scientific": {
+      "files": [
+        "datasets/raw/shards/hf_mini/pes2o.jsonl",
+        "datasets/raw/shards/hf_mini/pleias_open.jsonl",
+        "datasets/seed/scientific/seed_0001.jsonl",
+        "datasets/raw/shards/identity/latex_architecture.jsonl",
+        "datasets/raw/shards/reasoning/technical_reasoning.jsonl"
+      ],
+      "docs": 5531
+    },
     "multilingual": {
       "files": [
+        "datasets/raw/shards/hf_mini/wiki_en.jsonl",
+        "datasets/raw/shards/hf_mini/wiki_ru.jsonl",
+        "datasets/raw/shards/hf_mini/pg19.jsonl",
         "datasets/seed/multilingual/seed_0001.jsonl",
         "datasets/raw/shards/identity/nullxes_identity.jsonl",
         "datasets/raw/shards/identity/identity_mantra.jsonl"
       ],
-      "docs": 84
+      "docs": 3616
     },
     "code": {
       "files": [
+        "datasets/raw/shards/hf_mini/mbpp.jsonl",
         "datasets/seed/code/seed_0001.jsonl",
         "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
         "datasets/raw/shards/code/frontend.jsonl",
         "datasets/raw/shards/code/backend.jsonl",
         "datasets/raw/shards/code/infrastructure.jsonl"
       ],
-      "docs": 266
+      "docs": 640
     },
     "enterprise": {
       "files": [
@@ -35,30 +44,13 @@
       ],
       "docs": 31
     },
-    "scientific": {
-      "files": [
-        "datasets/seed/scientific/seed_0001.jsonl",
-        "datasets/raw/shards/identity/latex_architecture.jsonl",
-        "datasets/raw/shards/reasoning/technical_reasoning.jsonl"
-      ],
-      "docs": 31
-    },
     "synthetic_structure": {
       "files": [
         "datasets/seed/synthetic_structure/seed_0001.jsonl",
-        "datasets/raw/shards/identity/identity_mantra.jsonl",
-        "datasets/sft/identity_v0.1.jsonl"
+        "datasets/sft/identity_v0.1.jsonl",
+        "datasets/raw/shards/identity/identity_mantra.jsonl"
       ],
-      "docs": 92
+      "docs": 25
     }
-  },
-  "totals": {
-    "multilingual": 84,
-    "code": 266,
-    "enterprise": 31,
-    "scientific": 31,
-    "synthetic_structure": 92
-  },
-  "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT.",
-  "status": "READY_FOR_STAGE0A"
+  }
 }

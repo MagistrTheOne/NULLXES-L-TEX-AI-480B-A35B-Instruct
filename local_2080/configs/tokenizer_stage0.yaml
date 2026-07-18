@@ -1,4 +1,5 @@
-# NULLXES-LÆTEX Tokenizer v0.1 — Stage0 / Gate 0
+# NULLXES-LÆTEX Tokenizer v0.1 — same Gate0 recipe as H200, run on RTX 2080 SUPER / Win11
+# Soft Unigram train → pad unused_* to 131072 (not --smoke)
 name: latex-tokenizer-v0.1
 version: "0.1"
 vocab_size: 131072
@@ -7,12 +8,11 @@ byte_fallback: true
 normalization: nfkc
 seed: 42
 
-# SentencePiece trainer library ONLY — never load foreign pretrained models
 sentencepiece:
   use_trainer_library: true
   allow_pretrained_load: false
   character_coverage: 0.9995
-  num_threads: 0  # 0 = auto
+  num_threads: 8
   seed_sentencepiece_size: 1000000
   max_sentence_length: 262144
 
@@ -77,7 +77,7 @@ fertility:
 paths:
   samples_dir: tests/tokenizer_samples
   artifact_dir: tokenizer/latex-v0.1
-  runtime_config: configs/runtime.yaml
+  runtime_config: local_2080/configs/runtime_2080.yaml
   corpus_manifest: datasets/manifests/gate0_tokenizer.json
   corpus_config: configs/corpus_gate0.yaml
 

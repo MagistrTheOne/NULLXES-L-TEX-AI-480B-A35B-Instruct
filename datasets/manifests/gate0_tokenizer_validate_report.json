@@ -1,5 +1,5 @@
 {
-  "manifest": "D:\\NULLXES\\NULLXES-L-TEX-AI-480B-A35B-Instruct\\datasets\\manifests\\pretrain_stage0.json",
+  "manifest": "D:\\NULLXES\\NULLXES-L-TEX-AI-480B-A35B-Instruct\\datasets\\manifests\\gate0_tokenizer.json",
   "passed": true,
   "errors": [],
   "buckets": {
@@ -9,7 +9,7 @@
       "ok": true
     },
     "code": {
-      "docs": 160,
+      "docs": 266,
       "min": 20,
       "ok": true
     },

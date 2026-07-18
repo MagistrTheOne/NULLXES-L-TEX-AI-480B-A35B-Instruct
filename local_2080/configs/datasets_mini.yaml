@@ -1,0 +1,87 @@
+# Local 2080 mini corpus — verified on Hub 2026-07-18 (MagistrTheOne token)
+# NO FineWeb / CC dumps. Gated Stack skipped until you accept license on Hub.
+name: latex-local-2080-mini-v0
+version: "0.2"
+
+output_dir: datasets/raw/shards/hf_mini
+manifest: datasets/manifests/pretrain_local_2080.json
+
+defaults:
+  max_docs_per_source: 4000
+  max_chars_per_doc: 8000
+  seed: 42
+
+sources:
+  # OK via parquet convert (legacy .py script broken on new datasets lib)
+  - id: pes2o
+    hub: allenai/peS2o
+    revision: refs/convert/parquet
+    split: train
+    streaming: true
+    text_field: text
+    bucket: scientific
+    max_docs: 3000
+    status: ok
+
+  # OK — filter Open Science / Culture / Source (skip Open Web = closer to crawl)
+  - id: pleias_open
+    hub: PleIAs/common_corpus
+    split: train
+    streaming: true
+    text_field: text
+    bucket: scientific
+    max_docs: 2500
+    filter_open_type:
+      - Open Science
+      - Open Culture
+      - Open Source
+    status: ok
+
+  - id: wiki_en
+    hub: wikimedia/wikipedia
+    config: 20231101.en
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 2000
+    status: ok
+
+  - id: wiki_ru
+    hub: wikimedia/wikipedia
+    config: 20231101.ru
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 1500
+    status: ok
+
+  - id: pg19
+    hub: emozilla/pg19
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 80
+    max_chars_per_doc: 12000
+    status: ok
+
+  # Tiny public code (Stack-smol is GATED — accept at HF to unlock later)
+  - id: mbpp
+    hub: google-research-datasets/mbpp
+    split: train
+    streaming: false
+    text_field: code
+    text_prefix_field: text
+    bucket: code
+    max_docs: 400
+    status: ok
+
+# GATED — do not use until you click Accept on Hub:
+#   https://huggingface.co/datasets/bigcode/the-stack-smol
+#   https://huggingface.co/datasets/bigcode/starcoderdata
+
+local_identity:
+  enabled: true
+  manifest: datasets/manifests/pretrain_stage0.json

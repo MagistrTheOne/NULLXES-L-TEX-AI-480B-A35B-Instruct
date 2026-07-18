@@ -146,6 +146,9 @@ class LatexModel(LatexPreTrainedModel):
         use_cache = use_cache if use_cache is not None else self.config.use_cache
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        if self.gradient_checkpointing and self.training and use_cache:
+            use_cache = False
+
         if input_ids is not None and inputs_embeds is not None:
             raise ValueError("Specify either input_ids or inputs_embeds")
         if input_ids is not None:
@@ -210,14 +213,26 @@ class LatexModel(LatexPreTrainedModel):
 
             past_key_value = _layer_past(past_key_values, idx)
 
-            layer_outputs = decoder_layer(
-                hidden_states,
-                attention_mask=attn_mask,
-                position_embeddings=position_embeddings,
-                past_key_value=past_key_value,
-                output_attentions=output_attentions,
-                use_cache=use_cache,
-            )
+            if self.gradient_checkpointing and self.training:
+                layer_outputs = torch.utils.checkpoint.checkpoint(
+                    decoder_layer,
+                    hidden_states,
+                    attn_mask,
+                    position_embeddings,
+                    past_key_value,
+                    output_attentions,
+                    False,
+                    use_reentrant=False,
+                )
+            else:
+                layer_outputs = decoder_layer(
+                    hidden_states,
+                    attention_mask=attn_mask,
+                    position_embeddings=position_embeddings,
+                    past_key_value=past_key_value,
+                    output_attentions=output_attentions,
+                    use_cache=use_cache,
+                )
             hidden_states = layer_outputs[0]
 
             if use_cache:

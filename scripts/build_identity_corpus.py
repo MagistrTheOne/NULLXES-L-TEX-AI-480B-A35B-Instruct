@@ -35,6 +35,7 @@ from latex_data.identity_corpus import (  # noqa: E402
     digital_employee_docs,
     enterprise_ai_docs,
     identity_docs,
+    identity_mantra_docs,
     sft_identity_examples,
     technical_reasoning_docs,
 )
@@ -156,6 +157,7 @@ def build_manifests(repo: Path) -> None:
     raw_files: dict[str, list[str]] = {
         "multilingual": [
             "datasets/raw/shards/identity/nullxes_identity.jsonl",
+            "datasets/raw/shards/identity/identity_mantra.jsonl",
         ],
         "code": [
             "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
@@ -172,6 +174,7 @@ def build_manifests(repo: Path) -> None:
             "datasets/raw/shards/reasoning/technical_reasoning.jsonl",
         ],
         "synthetic_structure": [
+            "datasets/raw/shards/identity/identity_mantra.jsonl",
             "datasets/sft/identity_v0.1.jsonl",
         ],
     }
@@ -230,6 +233,7 @@ def main() -> int:
 
     raw = repo / "datasets" / "raw" / "shards"
     n_id = write_jsonl(raw / "identity" / "nullxes_identity.jsonl", identity_docs())
+    n_mantra = write_jsonl(raw / "identity" / "identity_mantra.jsonl", identity_mantra_docs())
     n_arch = write_jsonl(raw / "identity" / "latex_architecture.jsonl", architecture_docs())
     n_de = write_jsonl(raw / "docs" / "digital_employee.jsonl", digital_employee_docs())
     n_ent = write_jsonl(raw / "docs" / "enterprise_ai.jsonl", enterprise_ai_docs())
@@ -286,6 +290,7 @@ def main() -> int:
             {
                 "written": {
                     "identity": n_id,
+                    "identity_mantra": n_mantra,
                     "architecture": n_arch,
                     "digital_employee": n_de,
                     "enterprise_ai": n_ent,

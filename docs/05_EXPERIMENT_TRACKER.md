@@ -10,6 +10,8 @@ Append-only. One row per run.
 | E008 | 2026-07-17 | nullxes_latex_7b | Weight Genesis | init_report | **PASS** | 6.745B bf16 HF ckpt | H200 RunPod |
 | E008b | 2026-07-17 | smoke_hf_causal | generate + Auto* load | shape | **PASS** | cache fix b53f772 | checkpoints/nullxes-latex-7b |
 | E009 | 2026-07-17 | identity_corpus | LÆTEX name + repo code shards | validate | in progress | Stage0a next, not 7B SFT | build_identity_corpus.py |
+| E011 | 2026-07-17 | local_2080/ | Win11 RTX 2080 SUPER playground | — | folder+cfg | practice train/QA locally; H200 next month | 50M fp16 seq256 |
+| E012 | 2026-07-18 | local_2080/tokenizer | Full Unigram+pad 131072 on 2080 | meta | in progress | max_sentence_length=262144; no --smoke | .venv-2080 |
 
 ## Planned queue (do not skip)
 

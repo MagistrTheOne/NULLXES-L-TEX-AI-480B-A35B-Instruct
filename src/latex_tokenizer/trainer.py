@@ -164,6 +164,8 @@ def train_tokenizer(
         # Never pass config seed=42 here — that capped Unigram to ~42 pieces.
         seed_sentencepiece_size=int(sp_cfg.get("seed_sentencepiece_size", 1_000_000)),
         hard_vocab_limit=hard_limit,
+        # Default SP 4192 skips long code/docs — Gate0 needs higher (H200/local).
+        max_sentence_length=int(sp_cfg.get("max_sentence_length", 262144)),
     )
     nthreads = int(sp_cfg.get("num_threads", 0))
     if nthreads > 0:
