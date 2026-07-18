@@ -12,10 +12,10 @@ python scripts/train_tokenizer.py --config configs/tokenizer_stage0.yaml
 python scripts/evaluate_tokenizer.py --config configs/tokenizer_stage0.yaml || true
 cat tokenizer/latex-v0.1/meta.json
 
-echo "=== 3. Stage0a ~100M bootstrap pretrain ==="
-python scripts/train_stage0a.py --config configs/stage0a_100m_bootstrap.yaml --device cuda
+echo "=== 3. Stage0a ~100M (RunPod RTX PRO 6000 cfg) ==="
+python scripts/train_stage0a.py --config configs/stage0a_100m_rtx_pro_6000.yaml --device cuda
 
 echo "=== DONE ==="
-echo "Checkpoint: checkpoints/nullxes-latex-100m-stage0a-v0.1"
+echo "Checkpoint: checkpoints/nullxes-latex-100m-stage0a-rtxpro6000"
 echo "Next: upload to HF as MagistrTheOne/NULLXES-LÆTEX-100M-Stage0a-v0.1"
-ls -lah checkpoints/nullxes-latex-100m-stage0a-v0.1 | head -30
+ls -lah checkpoints/nullxes-latex-100m-stage0a-rtxpro6000 | head -30

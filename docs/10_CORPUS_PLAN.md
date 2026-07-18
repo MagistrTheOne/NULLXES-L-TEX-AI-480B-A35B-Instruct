@@ -1,7 +1,8 @@
 # NULLXES-LÆTEX Corpus Plan — Data Plane (anti-void)
 
 **Problem:** configs + NHAT without a real corpus = research that evaporates.  
-**Rule:** nothing trains (tokenizer full Gate0, Stage0a, 7B) until `scripts/validate_corpus.py` PASSes for the target stage.
+**Rule:** nothing trains (tokenizer full Gate0, Stage0a, 7B) until `scripts/validate_corpus.py` PASSes for the target stage.  
+**Production Stage0 blueprint (sources, mix, curriculum, governance):** [`12_STAGE0_CORPUS_BLUEPRINT.md`](12_STAGE0_CORPUS_BLUEPRINT.md).
 
 ---
 

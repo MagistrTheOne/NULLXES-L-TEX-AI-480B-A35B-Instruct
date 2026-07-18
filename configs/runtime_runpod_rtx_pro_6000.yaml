@@ -1,0 +1,48 @@
+# RunPod pod: 1× RTX PRO 6000 · PyTorch 2.8.0 (cu128)
+# Image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+#
+# Spec (verify on pod):
+#   GPU: 1× RTX PRO 6000 — 96 GB VRAM
+#   RAM: 140 GB · vCPU: 16
+#   Disk: ~5750 GB total
+
+compute:
+  accelerator: cuda
+  devices: 1
+  gpu: RTX_PRO_6000
+  vram_gb: 96
+  system_ram_gb: 140
+  vcpu: 16
+  memory_policy:
+    # Init / genesis on CPU; train on GPU
+    cpu_offload: false
+    init_device: cpu
+    train_device: cuda
+  workers:
+    auto: true
+    dataloader_num_workers: 8
+
+storage:
+  # Prefer /workspace on RunPod (large disk ~5.7 TB)
+  root: /workspace/nullxes-latex
+  dataset_path: /workspace/nullxes-latex/datasets
+  streaming: true
+  mmap: true
+  processed_path: /workspace/nullxes-latex/datasets/processed
+  tokenizer_out: /workspace/nullxes-latex/tokenizer/latex-v0.1
+  checkpoint_root: /workspace/nullxes-latex/checkpoints
+  disk_gb_total: 5750
+
+precision:
+  tokenizer: fp32
+  train: bf16
+  init: float32
+
+provider_hints:
+  default: runpod
+  image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+  torch: "2.8.0+cu128"
+  pod:
+    gpus: 1
+    gpu_name: RTX_PRO_6000
+    price_hint_usd_per_hr: 1.99

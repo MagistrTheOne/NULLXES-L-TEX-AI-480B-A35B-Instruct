@@ -1,6 +1,7 @@
 # NULLXES-LÆTEX datasets
 
-See [`docs/10_CORPUS_PLAN.md`](../docs/10_CORPUS_PLAN.md).
+See [`docs/10_CORPUS_PLAN.md`](../docs/10_CORPUS_PLAN.md) (gates) and  
+[`docs/12_STAGE0_CORPUS_BLUEPRINT.md`](../docs/12_STAGE0_CORPUS_BLUEPRINT.md) (production Stage0 blueprint).
 
 | Path | Git | Role |
 |------|-----|------|

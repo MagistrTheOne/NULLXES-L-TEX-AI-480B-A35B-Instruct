@@ -104,7 +104,8 @@ python scripts/smoke_hf_causal.py --checkpoint checkpoints/nullxes-latex-7b
 Public API: `LatexForCausalLM` (`model_type=latex`) — see [`docs/11_TRANSFORMERS_CONTRACT.md`](docs/11_TRANSFORMERS_CONTRACT.md).  
 NHAT is the **engine**; Transformers CausalLM is the **chassis**.
 
-Hardware: design assumes **H200 / B300**. Paths via `configs/runtime.yaml` (`streaming`, `mmap`). Provider is **generic** in model configs.
+**Active Stage0 proxy pod:** RunPod **1× RTX PRO 6000** · image `runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404` · torch **2.8.0+cu128** — see [`docs/RUNPOD_PLAN.md`](docs/RUNPOD_PLAN.md).  
+Scale design still targets **H200 / B300**. Runtime: `configs/runtime_runpod_rtx_pro_6000.yaml`.
 
 ---
 

@@ -1,17 +1,20 @@
 # NULLXES-LÆTEX Stage1 Weight Genesis + later training stack
 # Do NOT install for Gate0-only work. Use after tokenizer Gate0.
 #
-# CRITICAL — Torch / CUDA on RunPod H200 (driver ~12.8):
-#   NEVER `pip install torch` from default PyPI (pulls CUDA 13 / breaks driver).
-#   Restore / pin cu124 first, THEN install this file:
+# CRITICAL — Torch / CUDA on RunPod (RTX PRO 6000 image):
+#   Image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+#   Prefer IMAGE torch 2.8.0+cu128 — NEVER `pip install torch` from default PyPI.
 #
-#   pip uninstall -y torch torchvision torchaudio
-#   pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 \
-#     --index-url https://download.pytorch.org/whl/cu124
 #   pip install -r requirements-stage1.txt
 #
-# Or keep the image-bundled torch (2.4.1+cu124) and only install this file
-# (torch lines are intentionally omitted).
+#   # Restore only if image torch was overwritten:
+#   pip uninstall -y torch torchvision torchaudio
+#   pip install -r requirements-torch-cu128.txt \
+#     --index-url https://download.pytorch.org/whl/cu128
+#   pip install -r requirements-stage1.txt
+#
+# Legacy Win11 RTX 2080: requirements-torch-cu124.txt (torch 2.4.1+cu124).
+# Torch lines intentionally omitted from this file.
 
 -r requirements-gate0.txt
 

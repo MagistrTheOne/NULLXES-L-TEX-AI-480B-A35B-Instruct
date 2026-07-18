@@ -4,13 +4,16 @@ NULLXES-LÆTEX Weight Genesis — Transformers-compatible Causal LM.
 
 Creates LatexForCausalLM, applies muP init, writes HF checkpoint.
 
-  # Recommended on H200 (fast save — no GPU↔CPU stall):
+  # Stage0a on RunPod RTX PRO 6000 — init on CPU (LATEXA), then GPU train:
+  python scripts/init_model.py --config configs/stage0a_100m_rtx_pro_6000.yaml \\
+      --dtype bfloat16 --smoke-device cpu
+
+  # 7B genesis (later / H200):
   python scripts/init_model.py --config configs/nullxes_latex_7b.yaml \\
-      --dtype bfloat16 --smoke-device cuda
+      --dtype bfloat16 --smoke-device cpu
 
-Checkpoint (canonical): checkpoints/nullxes-latex-7b
-
-Requires Stage1 + cu124 torch. Does NOT train.
+Requires Stage1 + image torch 2.8.0+cu128 (or requirements-torch-cu128.txt).
+Does NOT train.
 """
 
 from __future__ import annotations
@@ -59,8 +62,9 @@ def main() -> int:
     except ImportError as e:
         print(
             "Missing Stage1 deps.\n"
-            "  pip install -r requirements-torch-cu124.txt "
-            "--index-url https://download.pytorch.org/whl/cu124\n"
+            "  # RunPod image torch 2.8+cu128 preferred; restore only if needed:\n"
+            "  pip install -r requirements-torch-cu128.txt "
+            "--index-url https://download.pytorch.org/whl/cu128\n"
             "  pip install -r requirements-stage1.txt\n",
             file=sys.stderr,
         )
@@ -96,8 +100,8 @@ def main() -> int:
             print(
                 "[fail] CUDA smoke requested but torch.cuda.is_available() is False.\n"
                 "  pip uninstall -y torch torchvision torchaudio\n"
-                "  pip install -r requirements-torch-cu124.txt "
-                "--index-url https://download.pytorch.org/whl/cu124\n",
+                "  pip install -r requirements-torch-cu128.txt "
+                "--index-url https://download.pytorch.org/whl/cu128\n",
                 file=sys.stderr,
             )
             return 2

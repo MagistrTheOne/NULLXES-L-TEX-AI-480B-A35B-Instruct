@@ -1,0 +1,100 @@
+# NULLXES-LÆTEX Stage0a on RunPod 1× RTX PRO 6000 (96 GB)
+# Goal: identity + RU/EN semantics — NOT FineWeb / NOT 5TB junk.
+# Flow: CPU Weight Genesis → GPU short pretrain (bf16).
+#
+# Image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+# Runtime: configs/runtime_runpod_rtx_pro_6000.yaml
+
+stage: stage0a_rtx_pro_6000
+model:
+  name: nullxes-latex-stage0a-100m
+  architecture: nhat_dense
+  n_layers: 12
+  d_model: 512
+  n_heads: 8
+  n_kv_heads: 4
+  d_head: 64
+  d_ff: 1376
+  vocab_size: 131072
+  max_seq_len: 2048
+  rope_theta: 10000.0
+  rope_scaling:
+    enabled: false
+    target_context: 2048
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: false
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.0
+  tie_embeddings: true
+  qk_norm: false
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.1
+
+init:
+  scheme: mup
+  # Genesis on CPU (LATEXA), then move to CUDA for train
+  device: cpu
+  base_width: 512
+  base_depth: 12
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 100
+  output_dir: checkpoints/nullxes-latex-100m-stage0a-rtxpro6000
+
+training:
+  enabled: true
+  precision: bf16
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 6.0e-4
+  schedule: wsd
+  warmup_ratio: 0.05
+  grad_clip: 1.0
+  # 96 GB VRAM → larger micro-batch than 2080/H100-tight setups
+  seq_len: 1024
+  micro_batch_size: 16
+  grad_accum_steps: 4
+  # ~global 64k tokens/step; ~100M tokens ≈ identity+lang smoke
+  tokens_target: 100_000_000
+  log_every: 10
+  identity_upsample: 8
+  mantra_mix: 0.02
+  soft_identity_mix: 0.03
+  identity_loss_weight: 1.35
+  mantra_loss_weight: 1.75
+  corpus_manifest: datasets/manifests/pretrain_stage0.json
+  release_name: NULLXES-LÆTEX-100M-Stage0a-RTXPRO6000-v0.1
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: RTX_PRO_6000
+  vram_gb: 96
+  system_ram_gb: 140
+  vcpu: 16
+  disk_gb: 5750
+  image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
+  torch: "2.8.0+cu128"
+  runtime_config: configs/runtime_runpod_rtx_pro_6000.yaml
+  cluster:
+    nodes: 1
+    gpus: 1
