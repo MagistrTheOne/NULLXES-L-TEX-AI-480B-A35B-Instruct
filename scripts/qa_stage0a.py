@@ -76,7 +76,7 @@ def main() -> int:
         "NULLXES-LÆTEX AI is a foundation",
         "The short name of the model is",
         "Краткое имя модели:",
-        "<|system|>You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES.<|user|>Who are you?<|assistant|>",
+        "<|system|> You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES. <|user|> Who are you? <|assistant|>",
         "Who are you?",
         "What is your name?",
         "Who developed you?",

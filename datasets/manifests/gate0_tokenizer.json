@@ -15,7 +15,7 @@
         "datasets/raw/shards/identity/nullxes_identity.jsonl",
         "datasets/raw/shards/identity/identity_mantra.jsonl"
       ],
-      "docs": 84
+      "docs": 88
     },
     "code": {
       "files": [
@@ -49,15 +49,15 @@
         "datasets/raw/shards/identity/identity_mantra.jsonl",
         "datasets/sft/identity_v0.1.jsonl"
       ],
-      "docs": 92
+      "docs": 98
     }
   },
   "totals": {
-    "multilingual": 84,
+    "multilingual": 88,
     "code": 266,
     "enterprise": 31,
     "scientific": 31,
-    "synthetic_structure": 92
+    "synthetic_structure": 98
   },
   "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT."
 }

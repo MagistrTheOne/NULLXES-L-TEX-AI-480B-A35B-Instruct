@@ -327,16 +327,22 @@ def identity_mantra_pairs() -> list[tuple[str, str, str]]:
     return out
 
 
+def _identity_chat(user: str, assistant: str) -> str:
+    """Chat turn with spaces so specials do not glue to adjacent text."""
+    return (
+        "<|system|> You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES. "
+        f"<|user|> {user} "
+        f"<|assistant|> {assistant}"
+    )
+
+
 def identity_mantra_docs() -> list[dict[str, Any]]:
     """Pretrain-ready mantra docs (chat format + plain echo). Flag: identity_mantra=True."""
     docs: list[dict[str, Any]] = []
     i = 0
     for lang, u, a in identity_mantra_pairs():
         i += 1
-        chat = (
-            f"<|system|>You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES."
-            f"<|user|>{u}<|assistant|>{a}"
-        )
+        chat = _identity_chat(u, a)
         docs.append(
             {
                 "id": f"nlx-mantra-{lang}-{i:04d}a",
@@ -372,9 +378,7 @@ def sft_identity_examples() -> list[dict[str, Any]]:
     """SFT identity set — same mantras in chat format (also used in pretrain mix)."""
     out = []
     for i, (lang, u, a) in enumerate(identity_mantra_pairs(), 1):
-        text = (
-            f"<|system|>You are NULLXES-LÆTEX (LÆTEX), developed by NULLXES.<|user|>{u}<|assistant|>{a}"
-        )
+        text = _identity_chat(u, a)
         out.append(
             {
                 "id": f"nlx-sft-identity-{i:04d}",
