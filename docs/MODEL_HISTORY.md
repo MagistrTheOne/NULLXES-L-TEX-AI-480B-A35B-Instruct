@@ -1,0 +1,76 @@
+# NULLXES-LÆTEX — Model History
+
+Living lab journal. Append after every meaningful checkpoint / gate.
+
+---
+
+## v0.1 — Stage0a RTX PRO 6000 (identity bootstrap)
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-07-18 |
+| Params | **101.9M** dense NHAT |
+| Hardware | 1× RTX PRO 6000 Blackwell · torch 2.8.0+cu128 |
+| Tokens | ~99.9M (first pass) + continue (~100M) |
+| Tokenizer | latex-v0.1 (smoke Unigram on ~455 sentences → pad 131072) |
+| Final train loss | ~0.006 (heavy memorization) |
+| QA identity | **8/9** passed (pre-continue) |
+| Hub | https://huggingface.co/MagistrTheOne/NULLXES-L-TEX-100M-Stage0a-v0.1 |
+| Checkpoint | `checkpoints/nullxes-latex-100m-stage0a-rtxpro6000` |
+
+### What it proves
+
+- Own arch + muP + bf16 + HF package path work  
+- Identity canon (LÆTEX / NULLXES / @MagistrTheOne) sticks  
+
+### What it does NOT prove
+
+- General RU/EN competence  
+- Codegen  
+- Production tokenizer fertility  
+
+### Next
+
+Gate A corpus-v0.2 → Gate B tokenizer ablation → Gate C broader 100M eval → only then Gate D 20B genesis.
+
+---
+
+## v0.1.1 — Stage0a continue (+~100M tok)
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-07-18/19 |
+| Params | **101.9M** (same lineage) |
+| Tokens this pass | ~99.9M @ lr 2e-4 resume |
+| Tokens cumulative | ~200M |
+| Final train loss | ~0.0061 |
+| QA identity | **9/9** passed |
+| Decision | **keep** as identity brick; **do not** treat as language/code competence |
+
+### QA notes (honest)
+
+- Direct Q/A mantras clean (EN/RU who/name/author).  
+- Open prompts still leak markdown/tables from overfit corpus (`Как тебя зовут?`, short-name continue).  
+- Holdout-style forward loss ~9.9 vs train ~0.006 → memorization, not generalization.  
+
+### Hub
+
+Same repo; optional commit `v0.1.1-continue` when packaging again.
+
+---
+
+## Template for later entries
+
+```
+## vX.Y — short title
+
+| Field | Value |
+| Date | |
+| Params | |
+| Tokens | |
+| Tokenizer | |
+| Mix | |
+| Eval highlights | |
+| Hub / path | |
+| Decision | keep / discard / promote |
+```

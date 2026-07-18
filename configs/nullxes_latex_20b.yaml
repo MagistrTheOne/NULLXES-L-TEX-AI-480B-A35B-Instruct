@@ -1,0 +1,126 @@
+# NULLXES-LÆTEX Stage2 — dense ~18.8B (A35B-compatible WIDTH)
+# Same d_model / heads / d_ff as A35B; half depth (24 vs 48) — clean scale-up path.
+# Gates A→C PASS before genesis. See docs/13_STAGE2_PREP.md
+# 480B MoE: do not schedule here.
+stage: stage2_20b
+model:
+  name: nullxes-latex-20b
+  architecture: nhat_dense
+  role: a35b_width_proxy
+  # 24 = exactly half of A35B (48); ~18.8B params — cleaner than L=26
+  n_layers: 24
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 22016
+  vocab_size: 131072  # overridden by tokenizer v0.2 winner after Gate B
+  # train vs infer context (do not conflate)
+  train_context: 8192
+  infer_context: 32768
+  max_seq_len: 8192          # = train_context during pretrain
+  rope_theta: 1000000.0
+  rope_scaling:
+    enabled: true
+    target_context: 32768    # = infer_context
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  # Accel: NHAT already uses F.scaled_dot_product_attention (Flash/MemEff/Math via torch).
+  # flash-attn-2 package flag stays off until dedicated FA2 path is wired.
+  flash_attention: sdpa_auto
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+    local_rope: true
+    global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.25
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.2
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.2/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.2
+
+init:
+  scheme: mup
+  device: cpu
+  base_width: 2048
+  base_depth: 24
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+  inherit_from: null
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 500
+  output_dir: checkpoints/nullxes-latex-20b
+
+training:
+  enabled: false
+  seed: 42
+  deterministic: false       # true only for debug repro (slower)
+  precision: bf16
+  gradient_checkpointing: true
+  compile:
+    enabled: true            # torch.compile on Blackwell when trainer wires it
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 1.0e-4
+  schedule: wsd
+  warmup_ratio: 0.02
+  grad_clip: 1.0
+  seq_len: 8192              # = model.train_context
+  global_batch_tokens: 2097152
+  # Long-horizon target; STOP/decide at eval_every_tokens — do not blind-run 50B
+  tokens_target: 50_000_000_000
+  eval_every_tokens:
+    - 100_000_000
+    - 500_000_000
+    - 1_000_000_000
+    - 2_000_000_000
+    - 5_000_000_000
+  # Identity: mix rates only — no double upsample
+  identity_upsample: 1
+  mantra_mix: 0.005
+  soft_identity_mix: 0.01
+  corpus_manifest: datasets/manifests/pretrain_stage2.json
+
+eval:
+  enabled: true
+  tasks:
+    - identity
+    - python
+    - typescript
+    - reasoning
+    - multilingual
+    - summarization
+  report_dir: evals/reports/stage2_20b
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: H200
+  cluster:
+    nodes: 1
+    gpus: 8
+  parallelism:
+    tp: 2
+    pp: 2
+    dp: 2
+  backend:
+    distributed: nccl
+    zero_stage: 3
