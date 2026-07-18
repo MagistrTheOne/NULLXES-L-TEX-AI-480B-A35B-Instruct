@@ -32,6 +32,7 @@ wandb>=0.17.0
 # Data pipeline
 datasets>=3.0.0
 pyarrow>=17.0.0
+hf_transfer>=0.1.9   # required with HF_HUB_ENABLE_HF_TRANSFER=1 — no fallback
 
 # Distributed training
 accelerate>=1.0.0
