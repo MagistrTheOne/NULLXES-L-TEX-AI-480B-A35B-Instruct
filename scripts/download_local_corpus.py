@@ -176,11 +176,20 @@ def merge_manifest(cfg: dict[str, Any], shard_infos: list[dict[str, Any]]) -> Pa
                         buckets[b]["files"].append(f)
                 buckets[b]["docs"] += int(shard.get("docs") or 0)
 
+    # Default mix (same as Gate0 tokenizer) — required for validate_corpus mix_sum
+    mix = cfg.get("mix") or {
+        "multilingual": 0.40,
+        "code": 0.25,
+        "enterprise": 0.20,
+        "scientific": 0.10,
+        "synthetic_structure": 0.05,
+    }
     man = {
         "name": cfg["name"],
         "version": cfg.get("version", "0.1"),
         "hardware": "runpod_or_local",
         "mix_note": "HF Gate A proxy + local identity; no FineWeb; hf_transfer required",
+        "mix": mix,
         "shards": buckets,
         "sources_ok": [i["id"] for i in shard_infos],
     }

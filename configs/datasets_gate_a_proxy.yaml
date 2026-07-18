@@ -6,6 +6,13 @@ version: "0.2-proxy"
 output_dir: datasets/raw/shards/hf_gate_a
 manifest: datasets/manifests/corpus_gate_a_proxy.json
 
+mix:
+  multilingual: 0.40
+  code: 0.25
+  enterprise: 0.20
+  scientific: 0.10
+  synthetic_structure: 0.05
+
 defaults:
   max_docs_per_source: 20000
   max_chars_per_doc: 10000
