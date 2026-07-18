@@ -1,0 +1,92 @@
+# NULLXES-LÆTEX Tokenizer v0.2 — Gate B (train on Gate A proxy corpus)
+# Ablation: override vocab_size via scripts/run_tokenizer_ablation.py
+name: latex-tokenizer-v0.2
+version: "0.2"
+vocab_size: 131072
+model_type: unigram
+byte_fallback: true
+normalization: nfkc
+seed: 42
+
+sentencepiece:
+  use_trainer_library: true
+  allow_pretrained_load: false
+  character_coverage: 0.9995
+  num_threads: 0
+  seed_sentencepiece_size: 1000000
+  max_sentence_length: 262144
+
+corpus_mix:
+  multilingual: 0.40
+  code: 0.25
+  enterprise: 0.20
+  scientific: 0.10
+  synthetic_structure: 0.05
+
+synthetic_bans:
+  - personality
+  - tone
+  - employee_behavior
+  - brand_slogans
+  - persona_dialogue
+
+special_tokens:
+  pad:
+    token: "<|pad|>"
+    id: 0
+  unk:
+    token: "<|unk|>"
+    id: 1
+  bos:
+    token: "<|bos|>"
+    id: 2
+  eos:
+    token: "<|eos|>"
+    id: 3
+  agent:
+    token: "<|agent|>"
+    id: 4
+  tool_call:
+    token: "<|tool_call|>"
+    id: 5
+  memory:
+    token: "<|memory|>"
+    id: 6
+  identity:
+    token: "<|identity|>"
+    id: 7
+  workflow:
+    token: "<|workflow|>"
+    id: 8
+  system:
+    token: "<|system|>"
+    id: 9
+  user:
+    token: "<|user|>"
+    id: 10
+  assistant:
+    token: "<|assistant|>"
+    id: 11
+
+fertility:
+  ru_chars_per_token: [2.5, 4.0]
+  en_chars_per_token: [3.0, 5.0]
+  en_technical_min: 3.0
+  ru_technical_min: 2.2
+
+paths:
+  samples_dir: tests/tokenizer_samples
+  artifact_dir: tokenizer/latex-v0.2
+  runtime_config: configs/runtime_runpod_rtx_pro_6000.yaml
+  corpus_manifest: datasets/manifests/corpus_gate_a_proxy.json
+  corpus_config: configs/corpus_gate0.yaml
+
+fragmentation_must_not_char_split:
+  - "NULLXES-LÆTEX"
+  - "NULLXES-LÆTEX-AI-480B-A35B"
+  - "gpt-4.1-mini"
+  - "OpenAIRealtimeAPI"
+  - "ИНН2311391270"
+  - "RFC-9457"
+  - "KubernetesOperator"
+  - "customer_support.workflow"
