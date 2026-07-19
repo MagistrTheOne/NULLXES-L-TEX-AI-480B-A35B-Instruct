@@ -113,6 +113,23 @@ vs v0.1: smoke Unigram ~3.5k pieces + unused pad → v0.2 real 131072 pieces on 
 
 ---
 
+## v0.2-genesis — NULLXES-LÆTEX-20B Weight Genesis PASS
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-07-19 |
+| Params | **18.757B** dense NHAT (L=24, d=8192, A35B-width) |
+| Tokenizer | latex-v0.2 (131072 full Unigram) |
+| Checkpoint | `checkpoints/nullxes-latex-20b` (~35G, 21 shards) |
+| Init | muP + DeepNorm residual · bf16 · CPU smoke |
+| `init_report.passed` | **true** |
+| HF smoke | **PASS** (`smoke_hf_causal.py`) |
+| Train | **not started** — next ZeRO-3 + ≤100M tok mid-eval |
+
+Hub tokenizer: https://huggingface.co/MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2
+
+---
+
 ## Template for later entries
 
 ```

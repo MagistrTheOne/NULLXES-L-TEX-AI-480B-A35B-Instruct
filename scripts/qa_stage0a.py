@@ -25,8 +25,15 @@ def main() -> int:
     p.add_argument("--device", default="cuda")
     args = p.parse_args()
     ckpt = ROOT / args.checkpoint
-    if not (ckpt / "model.safetensors").is_file():
-        print(f"[fail] missing {ckpt / 'model.safetensors'}", file=sys.stderr)
+    has_weights = (ckpt / "model.safetensors").is_file() or (
+        ckpt / "model.safetensors.index.json"
+    ).is_file() or any(ckpt.glob("model-*-of-*.safetensors"))
+    if not has_weights:
+        print(
+            f"[fail] missing weights under {ckpt} "
+            "(model.safetensors or sharded model-*-of-*.safetensors)",
+            file=sys.stderr,
+        )
         return 2
 
     import torch
@@ -39,6 +46,7 @@ def main() -> int:
     print(f"[load] {ckpt} → {device}", flush=True)
     config = AutoConfig.from_pretrained(ckpt, trust_remote_code=False)
     assert config.model_type == "latex", config.model_type
+    # 20B may not fit in bf16 on GPU with full load — prefer CUDA if asked, else CPU
     model = AutoModelForCausalLM.from_pretrained(ckpt, dtype=torch.bfloat16)
     model = model.to(device).eval()
     n = sum(p.numel() for p in model.parameters())
@@ -143,19 +151,35 @@ def main() -> int:
         "note": "PUBLIC answers must not emit schema tables / INTERNAL fences",
     }
 
-    # 4) files present
-    need = [
-        "config.json",
-        "model.safetensors",
-        "tokenizer.model",
-        "special_tokens.json",
-        "train_report.json",
-    ]
-    files_ok = all((ckpt / n).is_file() for n in need)
-    report["checks"]["artifacts"] = {"passed": files_ok, "need": need}
+    # 4) files present (single-file or sharded HF layout)
+    need = ["config.json", "tokenizer.model", "special_tokens.json"]
+    missing = [n for n in need if not (ckpt / n).is_file()]
+    single = (ckpt / "model.safetensors").is_file()
+    sharded = (ckpt / "model.safetensors.index.json").is_file() or any(
+        ckpt.glob("model-*-of-*.safetensors")
+    )
+    if not (single or sharded):
+        missing.append("model.safetensors|model-*-of-*.safetensors")
+    # genesis has init_report; trained Stage0a has train_report
+    has_report = (ckpt / "train_report.json").is_file() or (ckpt / "init_report.json").is_file()
+    if not has_report:
+        missing.append("train_report.json|init_report.json")
+    files_ok = len(missing) == 0
+    report["checks"]["artifacts"] = {
+        "passed": files_ok,
+        "need": need + ["weights", "train_or_init_report"],
+        "missing": missing,
+        "sharded_weights": sharded,
+    }
 
-    critical = ["forward_finite", "generate", "artifacts", "identity"]
+    # Identity is critical for Stage0a-trained; informational for random genesis
+    is_genesis = (ckpt / "init_report.json").is_file() and not (ckpt / "train_report.json").is_file()
+    critical = ["forward_finite", "generate", "artifacts"]
+    if not is_genesis:
+        critical.append("identity")
     passed = all(report["checks"][k]["passed"] for k in critical)
+    if is_genesis:
+        report["note"] = "genesis checkpoint — identity not required until train"
     report["passed"] = passed
     report["critical"] = critical
     out_path = ckpt / "qa_report.json"
