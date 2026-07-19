@@ -67,13 +67,15 @@ checkpoint:
   output_dir: checkpoints/nullxes-latex-20b
 
 training:
+  # Genesis done. Keep false until ZeRO-3 trainer path exists.
   enabled: false
   seed: 42
-  deterministic: false       # true only for debug repro (slower)
+  deterministic: false
   precision: bf16
   gradient_checkpointing: true
+  resume_from: checkpoints/nullxes-latex-20b
   compile:
-    enabled: true            # torch.compile on Blackwell when trainer wires it
+    enabled: true
   optimizer: adamw
   beta1: 0.9
   beta2: 0.95
@@ -83,21 +85,20 @@ training:
   schedule: wsd
   warmup_ratio: 0.02
   grad_clip: 1.0
-  seq_len: 8192              # = model.train_context
-  global_batch_tokens: 2097152
-  # Long-horizon target; STOP/decide at eval_every_tokens — do not blind-run 50B
-  tokens_target: 50_000_000_000
+  # First PRO 6000 ZeRO run: short context; scale to 8192 after smoke
+  seq_len: 2048
+  micro_batch_size: 1
+  grad_accum_steps: 16
+  global_batch_tokens: 32768   # 1*2048*16 — not 2M until multi-GPU
+  # First mid-eval bar — do NOT blind-run 50B
+  tokens_target: 100_000_000
   eval_every_tokens:
     - 100_000_000
-    - 500_000_000
-    - 1_000_000_000
-    - 2_000_000_000
-    - 5_000_000_000
-  # Identity: mix rates only — no double upsample
   identity_upsample: 1
   mantra_mix: 0.005
   soft_identity_mix: 0.01
-  corpus_manifest: datasets/manifests/pretrain_stage2.json
+  # Real manifest (Gate A proxy). pretrain_stage2.json does not exist yet.
+  corpus_manifest: datasets/manifests/corpus_gate_a_proxy.json
 
 eval:
   enabled: true
