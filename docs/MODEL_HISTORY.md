@@ -124,7 +124,8 @@ vs v0.1: smoke Unigram ~3.5k pieces + unused pad → v0.2 real 131072 pieces on 
 | Init | muP + DeepNorm residual · bf16 · CPU smoke |
 | `init_report.passed` | **true** |
 | HF smoke | **PASS** (`smoke_hf_causal.py`) |
-| Train | **not started** — next ZeRO-3 + ≤100M tok mid-eval |
+| Train | **not started** — next week ZeRO-3 + 100M tok (`docs/15_NEXT_WEEK_20B.md`) |
+| Hub (planned) | `MagistrTheOne/NULLXES-L-TEX-20B-Genesis-v0.1` — card: rework **Aug 2026** |
 
 Hub tokenizer: https://huggingface.co/MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2
 

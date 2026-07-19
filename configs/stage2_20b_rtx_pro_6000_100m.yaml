@@ -1,0 +1,82 @@
+# Stage2 first train — ~100M tokens on 1× RTX PRO 6000 (ZeRO-3 + CPU offload)
+# Run NEXT WEEK after Hub genesis upload. Do not blind-run 50B.
+stage: stage2_20b_100m_zero3
+model:
+  name: nullxes-latex-20b
+  architecture: nhat_dense
+  n_layers: 24
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 22016
+  vocab_size: 131072
+  max_seq_len: 2048
+  rope_theta: 1000000.0
+  hybrid_attention:
+    enabled: true
+    local_window: 4096
+    full_every: 4
+  depth_nope_ratio: 0.25
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.2
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v0.2/special_tokens.json
+  artifact_dir: tokenizer/latex-v0.2
+
+init:
+  scheme: mup
+  device: cpu
+  base_width: 2048
+  base_depth: 24
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 50
+  output_dir: checkpoints/nullxes-latex-20b-train-100m
+
+training:
+  enabled: true
+  precision: bf16
+  resume_from: checkpoints/nullxes-latex-20b
+  deepspeed_config: configs/deepspeed/zero3_cpu_offload_20b.json
+  gradient_checkpointing: true
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 1.0e-4
+  schedule: wsd
+  warmup_ratio: 0.05
+  grad_clip: 1.0
+  seq_len: 2048
+  micro_batch_size: 1
+  grad_accum_steps: 16
+  tokens_target: 100_000_000
+  log_every: 5
+  identity_upsample: 1
+  mantra_mix: 0.005
+  soft_identity_mix: 0.01
+  identity_loss_weight: 1.2
+  mantra_loss_weight: 1.5
+  corpus_manifest: datasets/manifests/corpus_gate_a_proxy.json
+  release_name: NULLXES-LÆTEX-20B-Stage2-100M-v0.1
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: RTX_PRO_6000
+  vram_gb: 96
+  cluster:
+    nodes: 1
+    gpus: 1
