@@ -1,6 +1,4 @@
-# LEGACY — local Win11 RTX 2080 SUPER (.venv-2080) only.
-# RunPod Stage0 proxy uses CUDA 12.8 / torch 2.8 → requirements-torch-cu128.txt
-#
+# H200 / CUDA 12.4 — prefer image torch; reinstall only if broken.
 #   pip install -r requirements-torch-cu124.txt --index-url https://download.pytorch.org/whl/cu124
 torch==2.4.1
 torchvision==0.19.1

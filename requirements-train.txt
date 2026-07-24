@@ -1,0 +1,32 @@
+# NULLXES-LÆTEX — train / genesis stack (H200 / B300 cluster)
+#
+# Prefer the image torch. Do NOT `pip install torch` from default PyPI.
+#
+#   pip install -r requirements-train.txt
+#
+# Torch restore (only if image torch was overwritten):
+#   H200 / cu124:  pip install -r requirements-torch-cu124.txt --index-url https://download.pytorch.org/whl/cu124
+#   cu128 images:  pip install -r requirements-torch-cu128.txt --index-url https://download.pytorch.org/whl/cu128
+
+-r requirements.txt
+
+omegaconf>=2.3.0
+protobuf>=5.27.0,<7
+scipy>=1.13.0
+rich>=13.7.0
+wandb>=0.17.0
+
+datasets>=3.0.0
+pyarrow>=17.0.0
+hf_transfer>=0.1.9
+
+accelerate>=1.0.0
+deepspeed>=0.15.0
+
+ninja
+packaging
+einops>=0.8.0
+
+pytest>=8.0.0
+safetensors>=0.4.0
+transformers>=4.46.0,<5.0.0

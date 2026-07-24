@@ -1,13 +1,5 @@
-# RunPod image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
-# PyTorch 2.8.0 + CUDA 12.8 — prefer the IMAGE torch; only reinstall if broken.
-#
-#   # Prefer (image already has torch 2.8.0+cu128):
-#   python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))"
-#
-#   # Restore / pin if someone overwrote with wrong CUDA:
-#   pip uninstall -y torch torchvision torchaudio
+# CUDA 12.8 images (optional). Prefer image torch; reinstall only if broken.
 #   pip install -r requirements-torch-cu128.txt --index-url https://download.pytorch.org/whl/cu128
-#
 torch==2.8.0
 torchvision==0.23.0
 torchaudio==2.8.0

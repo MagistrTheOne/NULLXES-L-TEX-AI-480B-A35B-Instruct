@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Download licensed HF samples for Gate A proxy / local_2080 mini pretrain.
+Download licensed HF samples for LÆTEX V1 corpus (and similar dataset YAMLs).
 
   export HF_HUB_ENABLE_HF_TRANSFER=1   # required — no fallback
   pip install hf_transfer
-  export HF_TOKEN=...                  # optional for public; needed for gated
-  python scripts/download_local_corpus.py --config configs/datasets_gate_a_proxy.yaml
+  python scripts/download_local_corpus.py --config configs/datasets_latex_v1.yaml
 
 Resume: existing complete shards are skipped. Manifest rewritten at end.
 Never writes tokens to disk. No FineWeb/CC full dumps.
@@ -202,7 +201,7 @@ def merge_manifest(cfg: dict[str, Any], shard_infos: list[dict[str, Any]]) -> Pa
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--config", default="local_2080/configs/datasets_mini.yaml")
+    p.add_argument("--config", default="configs/datasets_latex_v1.yaml")
     args = p.parse_args()
 
     require_hf_transfer()

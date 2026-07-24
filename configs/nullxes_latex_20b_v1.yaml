@@ -73,4 +73,8 @@ hardware:
   vram_gb: 141
   cluster:
     nodes: 1
-    gpus: 4
+    gpus: 4   # ZeRO-2; for 2×H100 use configs/deepspeed/zero3_cpu_offload_20b.json
+  fallback:
+    gpu: H100_SXM
+    gpus: 2
+    deepspeed: configs/deepspeed/zero3_cpu_offload_20b.json

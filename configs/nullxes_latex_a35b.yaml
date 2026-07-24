@@ -1,5 +1,5 @@
-# NULLXES-LÆTEX A35B — dense genetic ancestor (~35.3B)
-# Weight Genesis / pretrain after Stage1; MoE expand parent for 480B.
+# NULLXES-LÆTEX A35B — dense genetic ancestor (~35.3B).
+# Width/depth parent for 200B MoE and 480B MoE expand. Not a V1 train target.
 stage: a35b
 model:
   name: nullxes-latex-a35b
@@ -13,6 +13,8 @@ model:
   d_ff: 22016
   vocab_size: 131072
   max_seq_len: 32768
+  train_context: 8192
+  infer_context: 32768
   rope_theta: 1000000.0
   rope_scaling:
     enabled: true
@@ -20,6 +22,7 @@ model:
   norm: rmsnorm
   activation: swiglu
   attention: gqa
+  flash_attention: sdpa_auto
   hybrid_attention:
     enabled: true
     local_window: 4096
@@ -36,13 +39,12 @@ model:
   no_bias: true
 
 tokenizer:
-  name: nullxes-latex-v0.1
+  name: nullxes-latex-v1
   vocab_size: 131072
-  special_tokens_file: tokenizer/latex-v0.1/special_tokens.json
-  artifact_dir: tokenizer/latex-v0.1
+  special_tokens_file: tokenizer/latex-v1/special_tokens.json
+  artifact_dir: tokenizer/latex-v1
 
 identity_embedding_layer:
-  # Reserved technical slot. Not implemented, no named profiles in canon V1.
   enabled: false
   n_identities: 64
   inject: layer0
@@ -51,12 +53,12 @@ identity_embedding_layer:
 init:
   scheme: mup
   base_width: 2048
-  base_depth: 32
+  base_depth: 24
   std: 0.02
   residual_scale:
     type: deepnorm
     value: "0.02 / sqrt(2*n_layers)"
-  inherit_from: configs/nullxes_latex_7b.yaml
+  inherit_from: configs/nullxes_latex_20b_v1.yaml
 
 checkpoint:
   format: safetensors
@@ -85,6 +87,9 @@ hardware:
   cluster:
     nodes: 8
     gpus: 64
+  fallback:
+    gpu: H200_SXM
+    gpus: 128
   parallelism:
     tp: 4
     pp: 4

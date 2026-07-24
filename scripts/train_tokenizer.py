@@ -22,7 +22,7 @@ def load_yaml(path: Path) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Train LÆTEX tokenizer v0.1")
-    p.add_argument("--config", default="configs/tokenizer_stage0.yaml")
+    p.add_argument("--config", default="configs/tokenizer_latex_v1.yaml")
     p.add_argument("--runtime", default="configs/runtime.yaml")
     p.add_argument(
         "--smoke",

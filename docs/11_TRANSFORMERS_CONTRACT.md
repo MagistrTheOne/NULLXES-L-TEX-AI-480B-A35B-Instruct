@@ -50,8 +50,8 @@ src/latex/
 ## Weight Genesis
 
 ```bash
-pip install -r requirements-stage1.txt
-python scripts/init_model.py --config configs/nullxes_latex_7b.yaml
+pip install -r requirements-train.txt
+python scripts/init_model.py --config configs/nullxes_latex_20b_v1.yaml
 python scripts/smoke_hf_causal.py --checkpoint checkpoints/nullxes-latex-7b
 ```
 

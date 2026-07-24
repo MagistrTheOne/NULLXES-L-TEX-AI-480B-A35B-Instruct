@@ -99,7 +99,6 @@ paths:
   artifact_dir: tokenizer/latex-v1
   runtime_config: configs/runtime.yaml
   corpus_manifest: datasets/manifests/corpus_latex_v1.json
-  corpus_config: configs/corpus_gate0.yaml
 
 fragmentation_must_not_char_split:
   - "NULLXES-LÆTEX"

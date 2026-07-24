@@ -2,7 +2,7 @@
 """
 QA for NULLXES-LÆTEX-100M-Stage0a checkpoint before HF upload.
 
-  python scripts/qa_stage0a.py --checkpoint checkpoints/nullxes-latex-100m-stage0a-v0.1 --device cuda
+  python scripts/qa_stage0a.py --checkpoint checkpoints/nullxes-latex-20b-v1 --device cuda
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument(
         "--checkpoint",
-        default="checkpoints/nullxes-latex-100m-stage0a-v0.1",
+        default="checkpoints/nullxes-latex-20b-v1",
     )
     p.add_argument("--device", default="cuda")
     args = p.parse_args()

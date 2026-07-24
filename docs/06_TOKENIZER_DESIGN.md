@@ -1,8 +1,8 @@
-# NULLXES-LÆTEX Tokenizer v0.1 Design
+# NULLXES-LÆTEX Tokenizer v1 Design
 
-**Status:** Research Gate 0 — design locked before trainer implementation  
-**Artifact path:** `tokenizer/latex-v0.1/`  
-**Vocab:** LATEX-Vocab-131k (**131072** fixed for Stage0 / 7B / A35B)
+**Status:** LÆTEX V1 — train on corpus V1, vocab 131072, no pad  
+**Artifact path:** `tokenizer/latex-v1/`  
+**Vocab:** LATEX-Vocab-131k (**131072** fixed for 20B / A35B / MoE family)
 
 ---
 
@@ -125,7 +125,7 @@ Always run `tests/tokenizer_samples/*`.
 ## Artifact layout
 
 ```
-tokenizer/latex-v0.1/
+tokenizer/latex-v1/
   tokenizer.model
   vocab.json
   special_tokens.json

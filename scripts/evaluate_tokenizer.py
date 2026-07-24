@@ -18,7 +18,7 @@ from latex_tokenizer.evaluator import run_gate0_eval  # noqa: E402
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Gate 0 tokenizer evaluation")
-    p.add_argument("--config", default="configs/tokenizer_stage0.yaml")
+    p.add_argument("--config", default="configs/tokenizer_latex_v1.yaml")
     p.add_argument(
         "--smoke",
         action="store_true",

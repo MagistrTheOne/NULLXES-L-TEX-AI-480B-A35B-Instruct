@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Stage2 20B train — DeepSpeed ZeRO-3 + CPU offload (1× RTX PRO 6000).
+LÆTEX V1 / stage train — DeepSpeed ZeRO-2 (4× H200) or ZeRO-3+offload (2× H100).
 
-  deepspeed --num_gpus=1 scripts/train_stage2_20b.py \
-    --config configs/stage2_20b_rtx_pro_6000_100m.yaml
-
-Expect ~100M tokens then stop. Identity mix stays low (≤~1.5%).
+  deepspeed --num_gpus=4 scripts/train_stage2_20b.py \
+    --config configs/stage3_20b_iter.yaml
 """
 
 from __future__ import annotations
@@ -37,7 +35,7 @@ def _p50(values: list[float]) -> float | None:
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--config", default="configs/stage2_20b_rtx_pro_6000_100m.yaml")
+    p.add_argument("--config", default="configs/stage3_20b_iter.yaml")
     p.add_argument("--local_rank", type=int, default=-1)
     args = p.parse_args()
 
@@ -56,8 +54,8 @@ def main() -> int:
         SequencePacker,
         mask_labels,
     )
+    from latex_data.corpus_load import is_soft_identity, load_corpus
     from latex_data.telemetry import CpuEma, write_checkpoint_manifest
-    from train_stage0a import load_corpus, _is_soft_identity  # reuse Stage0a data plane
 
     cfg_path = ROOT / args.config
     with cfg_path.open(encoding="utf-8") as f:
@@ -78,10 +76,10 @@ def main() -> int:
 
     man_rel = train_cfg["corpus_manifest"]
     identity_upsample = int(train_cfg.get("identity_upsample", 1))
-    mantra_mix = float(train_cfg.get("mantra_mix", 0.005))
-    soft_id_mix = float(train_cfg.get("soft_identity_mix", 0.01))
-    id_loss_w = float(train_cfg.get("identity_loss_weight", 1.2))
-    mantra_loss_w = float(train_cfg.get("mantra_loss_weight", 1.5))
+    mantra_mix = float(train_cfg.get("mantra_mix", 0.0))
+    soft_id_mix = float(train_cfg.get("soft_identity_mix", 0.0))
+    id_loss_w = float(train_cfg.get("identity_loss_weight", 1.0))
+    mantra_loss_w = float(train_cfg.get("mantra_loss_weight", 1.0))
 
     base, soft, mantra = load_corpus(ROOT / man_rel, ROOT, identity_upsample)
     _log(
@@ -89,7 +87,7 @@ def main() -> int:
         f"mantra_mix={mantra_mix} soft_mix={soft_id_mix}"
     )
     if not base and not soft and not mantra:
-        _log("[fail] empty corpus — build identity + Gate A proxy first")
+        _log("[fail] empty corpus — run build_corpus_v1.py first")
         return 2
 
     resume = ROOT / train_cfg["resume_from"]
@@ -164,7 +162,7 @@ def main() -> int:
         mantra_mix=mantra_mix,
         soft_mix=soft_id_mix,
         rng=rng,
-        is_soft=_is_soft_identity,
+        is_soft=is_soft_identity,
     )
     packer = SequencePacker(
         sampler,

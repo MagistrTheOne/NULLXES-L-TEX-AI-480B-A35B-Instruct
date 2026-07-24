@@ -82,12 +82,13 @@ Ablate `full+RoPE` vs `full+NoPE` in experiment tracker before locking Stage1.
 
 | Config | Total | Active / token |
 |--------|------:|---------------:|
-| **480B-A35B** | **~476.0B** | **~35.1B** |
-| A35B dense (init) | ~35.3B | ~35.3B |
-| 7B dense | ~6.7B | ~6.7B |
-| Stage0a | ~100M | ~100M |
-| Stage0b | ~500M | ~500M |
-| Stage0c | ~1.6B | ~1.6B |
+| **20B dense V1** | **~18.8B** | **~18.8B** |
+| **A35B dense** | **~35.3B** | **~35.3B** |
+| **200B-A28B MoE** | **~202.2B** | **~28.0B** |
+| **480B-A35B MoE** | **~476.1B** | **~35.1B** |
+
+Scale path: `20B dense → A35B dense → 200B MoE → 480B MoE` (shared `d_model=8192`).
+
 
 ---
 
@@ -151,9 +152,9 @@ No pretrained `sp.model`. No foreign LLM tokenizers.
 
 | Field | Value |
 |-------|-------|
-| Vocab (Stage0 / 7B / A35B) | **131072** |
+| Vocab (20B / A35B / MoE family) | **131072** |
 | Vocab (480B optional) | **262144** via migration experiment only |
-| Artifact | `tokenizer/latex-v0.1/` |
+| Artifact | `tokenizer/latex-v1/` |
 | Holdout | byte fallback; reconstruction suite |
 
 ### Special tokens (locked IDs)
@@ -413,17 +414,20 @@ Gate: Stage N promotes only if NX suite + MoE health pass — not MMLU alone.
                     └────────────────────────────────────────┘
 ```
 
-### Config files (multiple cfgs; A35B for init)
+### Config files (active 2026 family)
 
 | File | Role |
 |------|------|
-| `configs/stage0a_100m.yaml` | Micro proof (~100M) |
-| `configs/stage0b_500m.yaml` | Hybrid + depth NoPE (~530M) |
-| `configs/stage0c_1b6.yaml` | Research gate (~1.6B) |
-| `configs/nullxes_latex_7b.yaml` | Stage 1 dense |
-| `configs/nullxes_latex_a35b.yaml` | **Init / μP backbone** |
-| `configs/nullxes_latex_a35b_alt.yaml` | Alternate init width |
-| `configs/nullxes_latex_480b_a35b.yaml` | Flagship MoE (reference until gate) |
+| `configs/nullxes_latex_20b_v1.yaml` | **20B dense V1** — current train target |
+| `configs/nullxes_latex_a35b.yaml` | A35B dense ancestor (MoE expand parent) |
+| `configs/nullxes_latex_200b_moe.yaml` | **200B-A28B MoE** midscale reference |
+| `configs/nullxes_latex_480b_a35b.yaml` | **480B-A35B MoE** flagship reference |
+| `configs/tokenizer_latex_v1.yaml` | Tokenizer v1 |
+| `configs/stage3_20b_iter.yaml` | Staged foundation bootstrapping |
+| `configs/README.md` | Index |
+
+See also: `docs/17_LATEX_V1.md`.
+
 
 ---
 

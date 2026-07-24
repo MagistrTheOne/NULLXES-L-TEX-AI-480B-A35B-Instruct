@@ -333,7 +333,7 @@ def main() -> int:
                 "next": [
                     "python scripts/validate_corpus.py --manifest datasets/manifests/gate0_tokenizer.json",
                     "python scripts/validate_corpus.py --manifest datasets/manifests/pretrain_stage0.json",
-                    "python scripts/train_tokenizer.py --config configs/tokenizer_stage0.yaml",
+                    "python scripts/train_tokenizer.py --config configs/tokenizer_latex_v1.yaml",
                 ],
             },
             indent=2,

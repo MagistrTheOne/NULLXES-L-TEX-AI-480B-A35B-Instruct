@@ -1,5 +1,5 @@
-# NULLXES-LÆTEX Research Gate 0 — Tokenizer only
-# pip install -r requirements.txt
+# NULLXES-LÆTEX — base (tokenizer, YAML, corpus tooling)
+#   pip install -r requirements.txt
 sentencepiece>=0.2.0
 PyYAML>=6.0
 numpy>=2.0.0

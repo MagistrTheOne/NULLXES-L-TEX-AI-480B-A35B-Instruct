@@ -1,7 +1,7 @@
 """
 NULLXES-LÆTEX Tokenizer — HuggingFace PreTrainedTokenizer interface.
 
-Wraps SentencePiece artifacts under tokenizer/latex-v0.1/.
+Wraps SentencePiece artifacts under tokenizer/latex-v1/.
 Does NOT load foreign LLM tokenizers.
 """
 
@@ -171,10 +171,10 @@ class LatexTokenizer(PreTrainedTokenizer):
         path = Path(pretrained_model_name_or_path)
         vocab = path / "tokenizer.model"
         specials = path / "special_tokens.json"
-        # Also accept latex-v0.1 layout
-        if not vocab.is_file() and (path / "tokenizer" / "latex-v0.1" / "tokenizer.model").is_file():
-            vocab = path / "tokenizer" / "latex-v0.1" / "tokenizer.model"
-            specials = path / "tokenizer" / "latex-v0.1" / "special_tokens.json"
+        # Also accept latex-v1 layout under nested tokenizer/
+        if not vocab.is_file() and (path / "tokenizer" / "latex-v1" / "tokenizer.model").is_file():
+            vocab = path / "tokenizer" / "latex-v1" / "tokenizer.model"
+            specials = path / "tokenizer" / "latex-v1" / "special_tokens.json"
         return cls(
             vocab_file=str(vocab) if vocab.is_file() else None,
             special_tokens_map_file=str(specials) if specials.is_file() else None,

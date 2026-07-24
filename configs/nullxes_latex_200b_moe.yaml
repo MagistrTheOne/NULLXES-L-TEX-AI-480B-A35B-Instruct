@@ -1,27 +1,33 @@
-# NULLXES-LÆTEX AI 480B-A35B-Instruct (MoE) — flagship reference (2026).
-# ~476.1B total / ~35.1B active · expand from A35B dense — not cold random MoE.
-# Do not schedule train until 20B V1 + 200B MoE path are proven.
-stage: flagship_reference
+# NULLXES-LÆTEX AI 200B-A28B — intermediate MoE (2026).
+#
+# Same width as 20B dense / A35B (d_model=8192). Depth matches A35B (L=48).
+# Param account (scripts/param_count.py): ~202.2B total / ~28.0B active.
+#
+# Schedule: after 20B dense V1 proves the stack; before 480B-A35B expand.
+# MoE code path is reference until dense ≥50B / 20B V1 gates pass.
+# Hardware: B300 preferred; H200 cluster with high EP/PP acceptable.
+stage: latex_200b_moe_reference
 model:
-  name: nullxes-latex-480b-a35b-instruct
+  name: nullxes-latex-200b-a28b
   architecture: nhat_moe
-  n_layers: 64
+  role: moe_midscale
+  n_layers: 48
   d_model: 8192
   n_heads: 64
   n_kv_heads: 8
   d_head: 128
   d_ff_dense: 22016
-  d_ff_expert: 2048
+  d_ff_expert: 2176
   vocab_size: 131072
-  max_seq_len_train: 32768
-  max_seq_len_infer: 131072
-  train_context: 32768
-  infer_context: 131072
-  max_seq_len: 32768
+  max_seq_len_train: 16384
+  max_seq_len_infer: 65536
+  train_context: 16384
+  infer_context: 65536
+  max_seq_len: 16384
   rope_theta: 1000000.0
   rope_scaling:
     enabled: true
-    target_context: 131072
+    target_context: 65536
   norm: rmsnorm
   activation: swiglu
   attention: gqa
@@ -49,7 +55,7 @@ tokenizer:
   artifact_dir: tokenizer/latex-v1
 
 moe:
-  n_routed_experts: 152
+  n_routed_experts: 80
   n_shared_experts: 1
   top_k: 6
   router: nx_sigmoid_normalize
@@ -61,16 +67,13 @@ moe:
   expert_diversity_loss: true
   diversity_coeff: 1.0e-4
   expert_banks_posthoc_example:
-    reasoning: [0, 15]
-    coding: [16, 31]
-    enterprise: [32, 47]
-    finance: [48, 59]
-    law: [60, 71]
-    science: [72, 83]
-    multilingual: [84, 99]
-    agent_behavior: [100, 115]
-    memory: [116, 131]
-    communication: [132, 151]
+    reasoning: [0, 11]
+    coding: [12, 23]
+    enterprise: [24, 35]
+    science: [36, 47]
+    multilingual: [48, 59]
+    agent_tools: [60, 71]
+    memory_workflow: [72, 79]
 
 identity_embedding_layer:
   enabled: false
@@ -79,8 +82,9 @@ identity_embedding_layer:
   freeze_trunk_when_swapping: true
 
 init:
-  scheme: expand_from_a35b
-  a35b_checkpoint: null
+  scheme: expand_from_dense_or_mup
+  # Prefer warm-start from A35B dense (same L/d) when available; else muP cold.
+  dense_checkpoint: null
   expert_noise: orthogonal
   noise_scale_start: 0.02
   noise_scale_end: 0.005
@@ -96,7 +100,7 @@ init:
 checkpoint:
   format: safetensors
   save_every_steps: 500
-  output_dir: checkpoints/nullxes-latex-480b-a35b
+  output_dir: checkpoints/nullxes-latex-200b-a28b
 
 training:
   enabled: false
@@ -106,16 +110,16 @@ training:
   beta2: 0.95
   eps: 1.0e-8
   weight_decay: 0.1
-  lr: 3.0e-5
+  lr: 5.0e-5
   schedule: wsd
-  warmup_ratio: 0.01
+  warmup_ratio: 0.015
   grad_clip: 1.0
-  global_batch_tokens: 8388608
-  tokens_target: 1_500_000_000_000
+  global_batch_tokens: 4194304
+  tokens_target: 800_000_000_000
   stop_on_expert_collapse: true
 
 alignment:
-  pipeline: [sft, dpo, axo, epo]
+  pipeline: [sft, dpo]
   protocol: input_analysis_answer
 
 hardware:
@@ -123,16 +127,16 @@ hardware:
   accelerator: cuda
   gpu: B300
   cluster:
-    nodes: 64
-    gpus: 512
+    nodes: 8
+    gpus: 64
   fallback:
     gpu: H200_SXM
-    gpus: 1024
+    gpus: 128
   parallelism:
     tp: 4
-    pp: 8
-    ep: 16
-    cp: 2
+    pp: 4
+    ep: 8
+    cp: 1
     dp: auto
   backend:
     distributed: nccl

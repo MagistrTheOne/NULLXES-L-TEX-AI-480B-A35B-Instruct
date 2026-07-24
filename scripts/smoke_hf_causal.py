@@ -34,7 +34,7 @@ def main() -> int:
         print(
             f"[fail] missing checkpoint {ckpt}\n"
             f"  Run: bash scripts/run_genesis_smoke.sh\n"
-            f"  Or:  python scripts/init_model.py --config configs/nullxes_latex_7b.yaml "
+            f"  Or:  python scripts/init_model.py --config configs/nullxes_latex_20b_v1.yaml "
             f"--dtype bfloat16 --smoke-device cuda",
             file=sys.stderr,
         )
@@ -45,7 +45,7 @@ def main() -> int:
         import torch
         from transformers import AutoConfig, AutoModelForCausalLM
     except ImportError as e:
-        print(f"[fail] {e}\nInstall: pip install -r requirements-stage1.txt", file=sys.stderr)
+        print(f"[fail] {e}\nInstall: pip install -r requirements-train.txt", file=sys.stderr)
         return 2
 
     print(f"[load] {ckpt}", flush=True)

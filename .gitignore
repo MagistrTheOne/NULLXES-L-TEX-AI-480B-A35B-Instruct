@@ -14,14 +14,9 @@ venv/
 # Large corpora (keep seed + manifests + schema in git)
 datasets/raw/
 datasets/processed/
-# Filter/dedup output of build_corpus_v1.py — regenerable from raw + manifests
 datasets/latex_v1/
 checkpoints/
 !checkpoints/.gitkeep
-20B-G/datasets/raw/
-20B-G/checkpoints/**
-!20B-G/checkpoints/.gitkeep
-!20B-G/checkpoints/.gitignore
 *.pt
 *.bin
 *.safetensors
@@ -29,7 +24,7 @@ checkpoints/
 wandb/
 runs/
 
-# Tokenizer train scratch
+# Tokenizer train scratch — keep special_tokens + .gitkeep only
 tokenizer/**/tmp/
 tokenizer/**/*.log
 tokenizer/**/tokenizer.model
@@ -37,17 +32,8 @@ tokenizer/**/vocab.json
 tokenizer/**/checksum.sha256
 tokenizer/**/meta.json
 tokenizer/**/gate0_report*.json
-!tokenizer/latex-v0.1/special_tokens.json
-!tokenizer/latex-v0.1/.gitkeep
-20B-G/tokenizer/**/tmp/
-20B-G/tokenizer/**/tokenizer.model
-20B-G/tokenizer/**/vocab.json
-20B-G/tokenizer/**/checksum.sha256
-20B-G/tokenizer/**/meta.json
-20B-G/tokenizer/**/gate0_report*.json
-!20B-G/tokenizer/latex-v0.3/special_tokens.json
-!20B-G/tokenizer/latex-v0.3/FREEZE.md
-!20B-G/tokenizer/latex-v0.3/.gitkeep
+!tokenizer/latex-v1/special_tokens.json
+!tokenizer/latex-v1/.gitkeep
 
 # IDE / OS
 .idea/

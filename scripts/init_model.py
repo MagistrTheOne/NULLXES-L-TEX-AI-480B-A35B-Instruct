@@ -4,16 +4,11 @@ NULLXES-LÆTEX Weight Genesis — Transformers-compatible Causal LM.
 
 Creates LatexForCausalLM, applies muP init, writes HF checkpoint.
 
-  # Stage0a on RunPod RTX PRO 6000 — init on CPU (LATEXA), then GPU train:
-  python scripts/init_model.py --config configs/stage0a_100m_rtx_pro_6000.yaml \\
-      --dtype bfloat16 --smoke-device cpu
+  python scripts/init_model.py --config configs/nullxes_latex_20b_v1.yaml \\
+      --dtype bfloat16 --smoke-device cpu \\
+      --holdout-jsonl datasets/latex_v1/holdout/multilingual/shard_0000.jsonl
 
-  # 7B genesis (later / H200):
-  python scripts/init_model.py --config configs/nullxes_latex_7b.yaml \\
-      --dtype bfloat16 --smoke-device cpu
-
-Requires Stage1 + image torch 2.8.0+cu128 (or requirements-torch-cu128.txt).
-Does NOT train.
+Does NOT train. Train stack: requirements-train.txt + image torch (cu124/cu128).
 """
 
 from __future__ import annotations
@@ -28,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-# Single source of truth — keep in sync with configs/nullxes_latex_7b.yaml
+# Defaults align with configs/nullxes_latex_20b_v1.yaml
 DEFAULT_CKPT = "checkpoints/nullxes-latex-7b"
 
 
@@ -133,7 +128,7 @@ def _holdout_batch(path, root, tok_artifact, vocab_size, device, torch, rows: in
 
 def main() -> int:
     p = argparse.ArgumentParser(description="NULLXES-LÆTEX Weight Genesis (HF CausalLM)")
-    p.add_argument("--config", default="configs/nullxes_latex_7b.yaml")
+    p.add_argument("--config", default="configs/nullxes_latex_20b_v1.yaml")
     p.add_argument(
         "--dtype",
         default="bfloat16",
@@ -171,7 +166,7 @@ def main() -> int:
             "  # RunPod image torch 2.8+cu128 preferred; restore only if needed:\n"
             "  pip install -r requirements-torch-cu128.txt "
             "--index-url https://download.pytorch.org/whl/cu128\n"
-            "  pip install -r requirements-stage1.txt\n",
+            "  pip install -r requirements-train.txt\n",
             file=sys.stderr,
         )
         raise SystemExit(2) from e
@@ -307,9 +302,9 @@ def main() -> int:
     gen_cfg.save_pretrained(out_dir)
 
     specials = ROOT / tok_cfg.get(
-        "special_tokens_file", "tokenizer/latex-v0.1/special_tokens.json"
+        "special_tokens_file", "tokenizer/latex-v1/special_tokens.json"
     )
-    art = ROOT / tok_cfg.get("artifact_dir", "tokenizer/latex-v0.1")
+    art = ROOT / tok_cfg.get("artifact_dir", "tokenizer/latex-v1")
     sp_model = art / "tokenizer.model"
     tok = LatexTokenizer(
         vocab_file=str(sp_model) if sp_model.is_file() else None,

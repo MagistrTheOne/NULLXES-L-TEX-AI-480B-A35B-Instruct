@@ -75,11 +75,12 @@ training:
   grad_accum_steps: 8
   tokens_target: 32_768_000    # 250 steps x 131072 tokens
   log_every: 5
+  # Canon V1: foundation model, not persona coaching. Keep mixes at 0.
   identity_upsample: 1
-  mantra_mix: 0.005
-  soft_identity_mix: 0.01
-  identity_loss_weight: 1.2
-  mantra_loss_weight: 1.5
+  mantra_mix: 0.0
+  soft_identity_mix: 0.0
+  identity_loss_weight: 1.0
+  mantra_loss_weight: 1.0
   corpus_manifest: datasets/manifests/corpus_latex_v1.json
   holdout_manifest: datasets/manifests/corpus_latex_v1_holdout.json
   release_name: NULLXES-LÆTEX-20B-V1-Stage01

@@ -52,34 +52,13 @@ def dense_count(
 
 
 def main() -> None:
-    cands = []
-    for n_routed in [128, 144, 152, 160, 168]:
-        for d_ff_e in [1792, 1920, 2048, 2176]:
-            for topk in [4, 6, 8]:
-                for n_shared in [1, 2]:
-                    r = moe_count(
-                        64, 8192, 8, 128, 131072, 4, n_routed, n_shared, topk, d_ff_e, 22016
-                    )
-                    if 460 <= r["total_B"] <= 500 and 32 <= r["active_B"] <= 38:
-                        cands.append((r["total_B"], r["active_B"], n_routed, n_shared, topk, d_ff_e))
-
-    cands.sort(key=lambda x: abs(x[0] - 480) + abs(x[1] - 35))
-    print("=== MoE candidates (~480B / ~35B) ===")
-    for c in cands[:15]:
-        print(
-            f"total={c[0]:.1f}B active={c[1]:.1f}B "
-            f"routed={c[2]} shared={c[3]} topk={c[4]} d_ff={c[5]}"
-        )
-
-    print("\n=== Dense A35B / 7B / Stage0 ===")
-    specs = [
-        ("A35B", 48, 8192, 8, 22016),
-        ("A35B-alt", 60, 7168, 8, 19456),
-        ("7B", 32, 4096, 8, 11008),
-        ("Stage0", 24, 2048, 4, 5504),
-    ]
-    for name, nl, d, nkv, dff in specs:
-        print(f"{name}: {dense_count(nl, d, nkv, 128, 131072, dff):.2f}B (L={nl} d={d})")
+    print("=== Active family (2026) ===")
+    print(f"20B dense V1: {dense_count(24, 8192, 8, 128, 131072, 22016):.3f}B")
+    print(f"A35B dense:   {dense_count(48, 8192, 8, 128, 131072, 22016):.3f}B")
+    m200 = moe_count(48, 8192, 8, 128, 131072, 4, 80, 1, 6, 2176, 22016)
+    print(f"200B MoE:     total={m200['total_B']:.1f}B active={m200['active_B']:.1f}B")
+    m480 = moe_count(64, 8192, 8, 128, 131072, 4, 152, 1, 6, 2048, 22016)
+    print(f"480B MoE:     total={m480['total_B']:.1f}B active={m480['active_B']:.1f}B")
 
 
 if __name__ == "__main__":

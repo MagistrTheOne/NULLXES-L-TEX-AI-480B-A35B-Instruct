@@ -1,29 +1,33 @@
-# Cloud-agnostic runtime — provider lives here / CLI only, never in model code.
+# Cloud-agnostic runtime — H200 / B300 cluster (2026).
+# Provider lives here / CLI only, never in model code.
 
 compute:
   accelerator: cuda
   devices: auto
   memory_policy:
-    cpu_offload: true
+    cpu_offload: false
+    init_device: cpu
+    train_device: cuda
   workers:
     auto: true
+    dataloader_num_workers: 8
 
 storage:
-  dataset_path: /workspace/datasets
+  dataset_path: datasets
   streaming: true
   mmap: true
-  processed_path: /workspace/datasets/processed
-  tokenizer_out: tokenizer/latex-v0.1
+  processed_path: datasets/processed
+  tokenizer_out: tokenizer/latex-v1
   checkpoint_root: checkpoints
 
 precision:
   tokenizer: fp32
+  train: bf16
+  init: float32
 
-# Optional overlay (not imported by latex_tokenizer / latex models)
 provider_hints:
-  # Active Stage0 proxy pod — see configs/runtime_runpod_rtx_pro_6000.yaml
   default: runpod
-  active_runtime: configs/runtime_runpod_rtx_pro_6000.yaml
-  image: runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404
-  torch: "2.8.0+cu128"
-  gpu: RTX_PRO_6000
+  preferred_gpu: H200_SXM
+  production_gpu: B300
+  image_hint: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+  torch_hint: "2.4.1+cu124"

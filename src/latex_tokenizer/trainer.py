@@ -142,7 +142,7 @@ def train_tokenizer(
 ) -> Path:
     """
     Train Unigram model with byte fallback.
-    Emits versioned artifacts under tokenizer/latex-v0.1/.
+    Emits versioned artifacts under tokenizer/latex-v1/.
     """
     sp_cfg = cfg.get("sentencepiece", {})
     if sp_cfg.get("allow_pretrained_load", False):

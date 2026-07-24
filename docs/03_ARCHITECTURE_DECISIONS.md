@@ -88,7 +88,7 @@ Stage0 / 7B / A35B use **131072**. Flagship **262144** only via explicit embeddi
 
 **Status:** Accepted  
 
-May use SentencePiece **trainer library** for Unigram. Forbidden: loading pretrained `sp.model` / foreign LLM tokenizers. All vocab/IDs/artifacts are NULLXES-owned under `tokenizer/latex-v0.1/`.
+May use SentencePiece **trainer library** for Unigram. Forbidden: loading pretrained `sp.model` / foreign LLM tokenizers. All vocab/IDs/artifacts are NULLXES-owned under `tokenizer/latex-v1/`.
 
 ## ADR-013 — Locked special token IDs 0–11
 
@@ -100,7 +100,7 @@ pad=0 … assistant=11 (see `06_TOKENIZER_DESIGN.md`). Emotion/role/tone live in
 
 **Status:** Accepted  
 
-`nullxes_latex_7b` first produces safetensors + `init_report.json` via `scripts/init_model.py`. Token training only after report PASS. Requirements split: Gate0 vs `requirements-stage1.txt`.
+`nullxes_latex_20b_v1` first produces safetensors + `init_report.json` via `scripts/init_model.py`. Token training only after report PASS. Requirements: `requirements.txt` (base) + `requirements-train.txt` (train stack).
 
 ## ADR-016 — Hardware provider generic
 
