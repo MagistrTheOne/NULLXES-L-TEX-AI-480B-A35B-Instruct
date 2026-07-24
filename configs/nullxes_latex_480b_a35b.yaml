@@ -68,17 +68,11 @@ moe:
     communication: [132, 151]
 
 identity_embedding_layer:
-  enabled: true
+  # Reserved technical slot. Not implemented, no named profiles in canon V1.
+  enabled: false
   n_identities: 64
   inject: layer0
   freeze_trunk_when_swapping: true
-  characters:
-    - anna
-    - adeline
-    - karen
-    - hr_agent
-    - sales_agent
-    - support_agent
 
 init:
   scheme: expand_from_a35b
@@ -118,7 +112,7 @@ training:
 
 alignment:
   pipeline: [sft, dpo, axo, epo]
-  persona: digital_employee
+  protocol: input_analysis_answer
 
 hardware:
   provider: generic

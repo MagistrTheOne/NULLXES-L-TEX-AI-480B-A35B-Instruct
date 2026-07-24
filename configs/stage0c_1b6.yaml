@@ -41,12 +41,13 @@ tokenizer:
   artifact_dir: tokenizer/latex-v0.1
 
 identity_embedding_layer:
-  enabled: true
+  # Reserved technical slot — not implemented in canon V1.
+  enabled: false
   n_identities: 16
   inject: layer0
 
 role_adapter:
-  enabled: true
+  enabled: false
   n_roles: 16
 
 init:

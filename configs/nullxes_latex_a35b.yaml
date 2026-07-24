@@ -42,17 +42,11 @@ tokenizer:
   artifact_dir: tokenizer/latex-v0.1
 
 identity_embedding_layer:
-  enabled: true
+  # Reserved technical slot. Not implemented, no named profiles in canon V1.
+  enabled: false
   n_identities: 64
   inject: layer0
   freeze_trunk_when_swapping: true
-  characters:
-    - anna
-    - adeline
-    - karen
-    - hr_agent
-    - sales_agent
-    - support_agent
 
 init:
   scheme: mup
