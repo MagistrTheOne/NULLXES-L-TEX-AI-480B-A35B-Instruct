@@ -4,7 +4,7 @@
 
 Prove science on a **small real model**, then scale. The strongest idea is not 480B — it is:
 
-**A35B genetic ancestor → MoE expansion → IEL for digital employees.**
+**20B dense V1 → larger dense ancestor → MoE expansion.**
 
 ## Principles
 

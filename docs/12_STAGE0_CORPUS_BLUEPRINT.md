@@ -69,7 +69,7 @@ Schema v2 (later): expand `bucket` enum; until then keep 5 buckets + `domain` fi
 | general_language (EN+RU) | **0.28** | Language backbone |
 | code | **0.28** | Code-first |
 | documentation | **0.14** | Executable knowledge |
-| enterprise (+ legal/finance public) | **0.12** | Digital employees |
+| enterprise (+ legal/finance public) | **0.12** | Business register |
 | math | **0.06** | Reasoning substrate |
 | science | **0.05** | STEM breadth |
 | technical_writing | **0.03** | Manuals / man |
@@ -244,7 +244,7 @@ Model must answer (EN/RU):
 | Author | @MagistrTheOne |
 | Site | https://www.nullxesdai.online/ |
 | Email | ceo@nullxes.com |
-| Role | foundation brain for Digital Employees |
+| Role | foundation language model by NULLXES |
 | Training rule | from-scratch; no foreign foundation checkpoints |
 
 **Forbidden in identity text:** invented clients, fake revenue, fake benchmarks, fake offices, alternate domains, celebrity personas (Anna/Adeline as *pretrain identity of the brain* — those are IEL overlays later, not trunk name).
@@ -304,7 +304,7 @@ Do **not** shuffle all domains uniformly for the whole run. Use phase schedules 
 | **C2 Docs+Math** | 25% | documentation 0.35 · math 0.20 · science 0.15 · code 0.20 · lang 0.10 | Precise technical prose |
 | **C3 Enterprise** | 20% | enterprise+legal+finance 0.45 · docs 0.25 · code 0.20 · lang 0.10 | Workflow / RFC / ops |
 | **C4 Identity** | 10% | identity 0.15 · synthetic_structure 0.05 · balanced rest 0.80 | Name lock without collapse |
-| **C5 Instruction-shaped** | 10% | structured Q/A from **human/docs** (not LLM synth) + light mantras | Prep for Digital Employee SFT |
+| **C5 Instruction-shaped** | 10% | structured Q/A from **human/docs** (not LLM synth) + light mantras | Prep for protocol SFT |
 
 Manifest files:
 

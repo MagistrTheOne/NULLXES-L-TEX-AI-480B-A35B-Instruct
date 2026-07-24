@@ -1,0 +1,76 @@
+# NULLXES-LÆTEX V1 — 20B dense genesis on tokenizer v1.
+#
+#   python scripts/init_model.py --config configs/nullxes_latex_20b_v1.yaml \
+#       --dtype bfloat16 --smoke-device cpu \
+#       --holdout-jsonl datasets/latex_v1/holdout/multilingual/shard_0000.jsonl
+#
+# Width matches A35B so the path to a larger dense model stays open. MoE is not
+# scheduled here — it comes after 50B.
+stage: latex_v1_genesis_20b
+model:
+  name: nullxes-latex-20b-v1
+  architecture: nhat_dense
+  role: a35b_width_proxy
+  n_layers: 24
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 22016
+  vocab_size: 131072
+  train_context: 2048
+  infer_context: 8192
+  max_seq_len: 2048
+  rope_theta: 1000000.0
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  flash_attention: sdpa_auto
+  hybrid_attention:
+    enabled: true
+    local_window: 1024
+    full_every: 4
+    local_rope: true
+    global_nope: true
+  depth_nope_ratio: 0.25
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v1/special_tokens.json
+  artifact_dir: tokenizer/latex-v1
+
+init:
+  scheme: mup
+  device: cpu
+  base_width: 2048
+  base_depth: 24
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+  inherit_from: null
+  # Untrained weights must score ln(131072) = 11.7856 within this band.
+  # Below ~9: leakage. Above ~15: broken init. See scripts/init_model.py.
+  loss_tolerance: 0.15
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 250
+  output_dir: checkpoints/nullxes-latex-20b-v1
+
+training:
+  enabled: false   # genesis only; staged runs live in configs/stage3_20b_iter.yaml
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: H200_SXM
+  vram_gb: 141
+  cluster:
+    nodes: 1
+    gpus: 4

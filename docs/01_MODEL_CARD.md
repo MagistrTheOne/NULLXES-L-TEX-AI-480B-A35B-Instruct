@@ -3,7 +3,8 @@
 | Field | Value |
 |-------|-------|
 | Family | NULLXES-LÆTEX AI |
-| Current trophy target | **Stage0** (not 480B) |
+| Self-definition | `LÆTEX-NULLXES FOUNDATION MODEL` · «LÆTEX — языковая модель компании NULLXES» |
+| Current target | **LÆTEX V1** — 20B dense, foundation bootstrapping (not 480B) |
 | Flagship (reference only) | 480B-A35B-Instruct MoE |
 | Init ancestor | A35B dense (`d_model=8192`) |
 | License / weights | NULLXES proprietary · from-scratch |
@@ -11,7 +12,9 @@
 
 ## Intended use
 
-Foundation brain for **Digital Employees** (enterprise agents with identity, memory, tools, workflows). Not a generic chat assistant.
+Foundation language model by NULLXES: enterprise reasoning, code, structured tool calls, RU/EN work tasks.
+Answer protocol is **Input → Analysis → Answer** — precision, structure, refusal when data is missing,
+criticism of a wrong premise. Not a chat assistant that services the user.
 
 ## Out of scope (v1 research)
 

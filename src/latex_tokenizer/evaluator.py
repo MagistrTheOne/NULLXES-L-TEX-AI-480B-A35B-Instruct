@@ -76,14 +76,25 @@ def check_concept_regression(cfg: dict[str, Any], sp, *, smoke: bool) -> dict[st
         if isinstance(meta, dict) and int(meta.get("id", -1)) >= 4
     }
 
+    # SentencePiece prepends a "▁" whitespace piece to any text it encodes
+    # (add_dummy_prefix). That is tokenizer-wide behaviour, not fragmentation,
+    # so it is stripped before asking whether the slot token stayed atomic.
     special_results = []
     specials_ok = True
     for token, expected_id in sorted(specials.items(), key=lambda kv: kv[1]):
         ids = _encode(sp, token)
-        ok = len(ids) == 1 and ids[0] == expected_id
+        pieces = _pieces(sp, token)
+        content = [i for i, piece in zip(ids, pieces) if piece.strip("▁ ")]
+        ok = content == [expected_id]
         specials_ok = specials_ok and ok
         special_results.append(
-            {"token": token, "expected_id": expected_id, "ids": ids, "passed": ok}
+            {
+                "token": token,
+                "expected_id": expected_id,
+                "ids": ids,
+                "content_ids": content,
+                "passed": ok,
+            }
         )
 
     concept_results = []

@@ -1,0 +1,111 @@
+# LÆTEX V1 — staged foundation bootstrapping, 250 steps per stage.
+#
+# The runner (scripts/run_stage3_iter.sh) rewrites resume_from, output_dir and
+# stage_name per stage, then gates on holdout loss and QA before continuing.
+# Short stages exist so a bad run is caught after an hour, not after a day.
+#
+# Shape per stage on 1 pod x 4x H200 SXM:
+#   seq_len 2048 x micro 2 x accum 8 x 4 GPU = 131072 tokens/step
+#   250 steps = 32.8M tokens = roughly one hour
+stage: latex_v1_stage
+model:
+  name: nullxes-latex-20b-v1
+  architecture: nhat_dense
+  n_layers: 24
+  d_model: 8192
+  n_heads: 64
+  n_kv_heads: 8
+  d_head: 128
+  d_ff: 22016
+  vocab_size: 131072
+  max_seq_len: 2048
+  rope_theta: 1000000.0
+  hybrid_attention:
+    enabled: true
+    local_window: 1024
+    full_every: 4
+  depth_nope_ratio: 0.25
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v1/special_tokens.json
+  artifact_dir: tokenizer/latex-v1
+
+init:
+  scheme: mup
+  device: cpu
+  base_width: 2048
+  base_depth: 24
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 125
+  output_dir: checkpoints/latex-20b-v1-iter1
+
+training:
+  enabled: true
+  stage_name: "LÆTEX V1 Stage 01"
+  precision: bf16
+  seed: 42
+  resume_from: checkpoints/nullxes-latex-20b-v1
+  # ZeRO-2 keeps parameters unsharded, which is what makes the CPU EMA shadow
+  # and 16-bit export straightforward. 4x H200 = 564 GB, enough without offload.
+  deepspeed_config: configs/deepspeed/zero2_20b_h200.json
+  gradient_checkpointing: true
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 1.0e-4
+  schedule: wsd
+  warmup_ratio: 0.05
+  grad_clip: 1.0
+  seq_len: 2048
+  micro_batch_size: 2
+  grad_accum_steps: 8
+  tokens_target: 32_768_000    # 250 steps x 131072 tokens
+  log_every: 5
+  identity_upsample: 1
+  mantra_mix: 0.005
+  soft_identity_mix: 0.01
+  identity_loss_weight: 1.2
+  mantra_loss_weight: 1.5
+  corpus_manifest: datasets/manifests/corpus_latex_v1.json
+  holdout_manifest: datasets/manifests/corpus_latex_v1_holdout.json
+  release_name: NULLXES-LÆTEX-20B-V1-Stage01
+  ema:
+    enabled: true
+    decay: 0.999
+    every_steps: 100
+
+eval:
+  enabled: true
+  holdout_manifest: datasets/manifests/corpus_latex_v1_holdout.json
+  report_dir: evals/reports/latex_v1
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: H200_SXM
+  vram_gb: 141
+  cluster:
+    nodes: 1
+    gpus: 4
+  parallelism:
+    tp: 1
+    pp: 1
+    dp: 4
+  backend:
+    distributed: nccl
+    zero_stage: 2
+    cpu_offload: false

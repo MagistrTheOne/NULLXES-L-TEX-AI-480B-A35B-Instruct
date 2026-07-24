@@ -1,0 +1,65 @@
+# LÆTEX V1 SFT — after the staged bootstrapping run.
+#
+#   python scripts/build_sft_v1.py
+#   deepspeed --num_gpus 4 scripts/train_sft_v1.py --config configs/sft_20b_v1.yaml
+#
+# Loss is computed on the assistant span only. resume_from must point at the
+# last stage checkpoint that passed its holdout and QA gates.
+stage: latex_v1_sft
+model:
+  name: nullxes-latex-20b-v1
+  architecture: nhat_dense
+
+tokenizer:
+  name: nullxes-latex-v1
+  vocab_size: 131072
+  special_tokens_file: tokenizer/latex-v1/special_tokens.json
+  artifact_dir: tokenizer/latex-v1
+
+checkpoint:
+  format: safetensors
+  output_dir: checkpoints/latex-20b-v1-sft
+
+training:
+  enabled: true
+  stage_name: "LÆTEX V1 SFT"
+  precision: bf16
+  seed: 42
+  resume_from: checkpoints/latex-20b-v1-iter4
+  sft_dataset: datasets/sft/latex_v1.jsonl
+  deepspeed_config: configs/deepspeed/zero2_20b_h200.json
+  gradient_checkpointing: true
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.0
+  lr: 2.0e-5
+  warmup_ratio: 0.1
+  grad_clip: 1.0
+  seq_len: 1024
+  micro_batch_size: 2
+  grad_accum_steps: 8
+  max_steps: 250
+  log_every: 5
+  release_name: NULLXES-LÆTEX-20B-V1-SFT
+  ema:
+    enabled: true
+    decay: 0.999
+    every_steps: 100
+
+# DPO comes after SFT passes QA. Pairs are built from the same canon:
+# chosen = protocol-conformant answer, rejected = empathy filler or a guess.
+dpo:
+  enabled: false
+  beta: 0.1
+  lr: 5.0e-7
+  pairs: datasets/sft/latex_v1_dpo_pairs.jsonl
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: H200_SXM
+  cluster:
+    nodes: 1
+    gpus: 4

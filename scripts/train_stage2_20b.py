@@ -28,6 +28,13 @@ def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
+def _p50(values: list[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[len(ordered) // 2]
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="configs/stage2_20b_rtx_pro_6000_100m.yaml")
@@ -40,7 +47,7 @@ def main() -> int:
     from torch.optim import AdamW
 
     import latex  # noqa: F401
-    from latex import LatexConfig, LatexForCausalLM, LatexTokenizer
+    from latex import LatexForCausalLM, LatexTokenizer
     from latex_data.batching import (
         BASE,
         MANTRA,
@@ -49,6 +56,7 @@ def main() -> int:
         SequencePacker,
         mask_labels,
     )
+    from latex_data.telemetry import CpuEma, write_checkpoint_manifest
     from train_stage0a import load_corpus, _is_soft_identity  # reuse Stage0a data plane
 
     cfg_path = ROOT / args.config
@@ -100,10 +108,14 @@ def main() -> int:
         special_tokens_map_file=str(tok_dir / "special_tokens.json"),
     )
 
+    world = int(os.environ.get("WORLD_SIZE", "1"))
+    rank = int(os.environ.get("RANK", os.environ.get("LOCAL_RANK", "0")))
+
     seq_len = int(train_cfg.get("seq_len", 2048))
     micro = int(train_cfg.get("micro_batch_size", 1))
     accum = int(train_cfg.get("grad_accum_steps", 16))
-    tokens_per_micro = seq_len * micro
+    # Global counts: every data-parallel rank consumes its own micro-batch.
+    tokens_per_micro = seq_len * micro * world
     tokens_per_step = tokens_per_micro * accum
     tokens_target = int(train_cfg["tokens_target"])
     max_steps = max(1, tokens_target // tokens_per_step)
@@ -112,7 +124,6 @@ def main() -> int:
     log_every = int(train_cfg.get("log_every", 5))
     clip = float(train_cfg.get("grad_clip", 1.0))
 
-    world = int(os.environ.get("WORLD_SIZE", "1"))
     ds_path = ROOT / train_cfg["deepspeed_config"]
     ds_config = json.loads(ds_path.read_text(encoding="utf-8"))
     ds_config["train_micro_batch_size_per_gpu"] = micro
@@ -138,7 +149,13 @@ def main() -> int:
 
     out_dir = ROOT / full["checkpoint"]["output_dir"]
     out_dir.mkdir(parents=True, exist_ok=True)
-    rng = random.Random(int(train_cfg.get("seed", 42)))
+    stage_name = train_cfg.get("stage_name") or full.get("stage") or "latex-v1-stage"
+    hw = full.get("hardware") or {}
+    cluster = hw.get("cluster") or {}
+    hardware = f"{cluster.get('nodes', 1)} node x {cluster.get('gpus', world)}x {hw.get('gpu', 'unknown')}"
+    # Per-rank offset: with a shared seed every rank samples the same documents,
+    # so a 4-GPU run would train on one batch four times instead of four batches.
+    rng = random.Random(int(train_cfg.get("seed", 42)) + 1000 * rank)
     pad_id = tokenizer.pad_token_id or 0
     sampler = DocSampler(
         base,
@@ -168,6 +185,17 @@ def main() -> int:
         # simple cosine to 10%
         t = (step - warmup) / max(1, max_steps - warmup)
         return lr * (0.1 + 0.9 * 0.5 * (1.0 + math.cos(math.pi * t)))
+
+    ema_cfg = train_cfg.get("ema") or {}
+    ema = None
+    if ema_cfg.get("enabled"):
+        ema = CpuEma(model, decay=float(ema_cfg.get("decay", 0.999)))
+        if ema.enabled:
+            _log(f"[ema] cpu shadow ready decay={ema.decay} every={ema_cfg.get('every_steps', 100)}")
+        else:
+            _log("[ema] disabled — parameters are sharded (ZeRO-3), shadow would be empty")
+            ema = None
+    ema_every = int(ema_cfg.get("every_steps", 100))
 
     t0 = time.time()
     tokens_seen = 0
@@ -213,10 +241,29 @@ def main() -> int:
             if math.isfinite(grad_norm) and grad_norm >= clip * 10:
                 _log(f"[warn] grad_norm {grad_norm:.2f} >= 10x clip — instability ahead")
 
+        if ema is not None and step % ema_every == 0:
+            ema.update(model)
+
         if step % int(full["checkpoint"].get("save_every_steps", 50)) == 0:
             tag = f"step{step}"
             model_engine.save_checkpoint(str(out_dir), tag=tag)
             _log(f"[ckpt] deepspeed → {out_dir}/{tag}")
+            write_checkpoint_manifest(
+                out_dir,
+                stage=stage_name,
+                step=step,
+                tokens_seen=tokens_seen,
+                train_loss=last_loss,
+                holdout_loss=None,
+                grad_norm_p50=_p50(grad_norms),
+                tokenizer_dir=tok_dir,
+                config_path=cfg_path,
+                dataset_manifest=ROOT / man_rel,
+                hardware=hardware,
+                ema=ema is not None,
+                root=ROOT,
+                extra={"tag": tag, "world_size": world},
+            )
 
     # Final HF-ish export (16-bit gather when ZeRO-3)
     try:
@@ -225,6 +272,28 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         _log(f"[warn] save_16bit_model failed: {e} — ds checkpoint still on disk")
         model_engine.save_checkpoint(str(out_dir), tag="final")
+
+    if ema is not None:
+        ema.update(model)
+        ema_path = ema.save(out_dir)
+        _log(f"[ema] saved → {ema_path} updates={ema.updates}")
+
+    write_checkpoint_manifest(
+        out_dir,
+        stage=stage_name,
+        step=max_steps,
+        tokens_seen=tokens_seen,
+        train_loss=last_loss,
+        holdout_loss=None,
+        grad_norm_p50=_p50(grad_norms),
+        tokenizer_dir=tok_dir,
+        config_path=cfg_path,
+        dataset_manifest=ROOT / man_rel,
+        hardware=hardware,
+        ema=ema is not None,
+        root=ROOT,
+        extra={"tag": "final", "world_size": world},
+    )
 
     ordered = sorted(grad_norms)
     report = {

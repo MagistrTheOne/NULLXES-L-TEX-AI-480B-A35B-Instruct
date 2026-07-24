@@ -152,6 +152,42 @@ Keep 20B Genesis as trunk. Prove mix on baby inside `20B-G/` first.
 
 ---
 
+## v1.0-canon — LÆTEX V1 line opened (code + canon, before any run)
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-07-24 |
+| Line | **LÆTEX V1** — 20B dense, `LÆTEX-NULLXES FOUNDATION MODEL` |
+| Stage naming | **foundation bootstrapping**, not pretraining |
+| Canon | Digital-entity framing removed from code, configs, seed corpus and QA |
+| Protocol | Input → Analysis → Answer; empathy filler banned and QA-gated |
+| Tokenizer | `configs/tokenizer_latex_v1.yaml` — v1, 131072, concept regression gate |
+| Corpus | `configs/datasets_latex_v1.yaml` — filters, SimHash dedup, holdout 0.5% |
+| Genesis | `configs/nullxes_latex_20b_v1.yaml` — init loss gate ln(131072) = 11.7856 ± 0.15 |
+| Stages | `configs/stage3_20b_iter.yaml` + `scripts/run_stage3_iter.sh`, 250 steps each |
+| SFT | `scripts/train_sft_v1.py` — loss on the assistant span only |
+| Hardware | 1 pod × 4× H200 SXM, ZeRO-2, no CPU offload |
+| Runbook | `docs/17_LATEX_V1.md` |
+
+### Failures found and fixed before the run
+
+| Defect | Impact |
+|--------|--------|
+| DeepSpeed accumulation | optimizer stepped once per 16 iterations while the token counter multiplied by 16 |
+| Padding in loss | `CrossEntropyLoss` trained on pad because labels were raw `input_ids` |
+| Padding instead of packing | short canon docs spent a whole `seq_len` window on pad |
+| Local attention window | applied only when `past_key_value is None`, so generate saw the full cache |
+| Shared RNG seed per rank | all data-parallel ranks would have drawn identical batches |
+| `tokenizer/latex-v0.1` | only **3539** real pieces of 131072; the rest are `<|unused_*|>` |
+| QA identity markers | `"digital employee"` counted as a passing identity hit |
+
+### Decision
+
+Line opened, nothing trained yet. The v0.1 tokenizer is disqualified for the V1
+line by the padded-vocab gate; v1 must be trained on the LÆTEX V1 corpus first.
+
+---
+
 ## Template for later entries
 
 ```

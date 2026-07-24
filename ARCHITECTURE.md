@@ -12,7 +12,7 @@
 
 | Field | Value |
 |-------|-------|
-| Product role | Foundation brain for NULLXES Digital Employees |
+| Product role | Foundation language model by NULLXES — `LÆTEX-NULLXES FOUNDATION MODEL` |
 | Model family | NULLXES-LÆTEX AI |
 | Flagship | **480B-A35B-Instruct** (MoE) |
 | Init backbone | **A35B** dense (same width; multiple cfgs) |
@@ -60,7 +60,7 @@ Single trailing residual sketches are incorrect — both attn and FFN keep a res
 | Activation | **SwiGLU** (SiLU gate) | no bias on linears |
 | FFN dense (`d_ff`) | **22016** | ≈ 8/3 · d_model, mult of 256 |
 | FFN expert (`d_ff_e`) | **2048** | fine-grained MoE |
-| Vocab | **128 000** | NULLXES-LÆTEX Tokenizer |
+| Vocab | **131072** | NULLXES-LÆTEX Tokenizer — matches every config and `param_count.py` |
 | Embeddings | Untied | + Identity Embedding Layer (frozen trunk) |
 | Stability | QK-norm optional; **Z-loss 1e-5** | fp32 softmax/router/loss |
 
@@ -276,17 +276,17 @@ ingest → normalize → PII scrub → MinHash dedup → quality scorer
 
 ---
 
-## 7. Instruct & Alignment — Digital Employee Intelligence
+## 7. Instruct & Alignment — answer protocol
 
-Goal: **not** a generic chat assistant. Goal: **employee that executes**.
+Goal: **not** a chat assistant that services the user. Goal: **Input → Analysis → Answer** —
+precision, structure, refusal when data is missing, criticism of a wrong premise.
 
 | Phase | Method | Objective |
 |-------|--------|-----------|
-| SFT | Supervised employee traces | Role fidelity, tool schema, workflow steps |
-| DPO / IPO | Preference pairs | Correct escalation, refusal of policy violations |
+| SFT | Own traces: identity, tool calls, code, refusals, criticism | Protocol fidelity, tool schema, workflow steps |
+| DPO / IPO | Preference pairs: protocol answer vs empathy filler or a guess | Refusal over fabrication |
 | **AXO** Agent Experience Optimization | Trajectory RL / RLOO on **behavior** (not answer text) | Verify sources, prepare decision, await confirm; tools over dumps |
-| **EPO** Enterprise Preference Optimization | Org-specific prefs + compliance | Bank/gov tone, auditability |
-| Identity SFT | IEL + Role Adapter + frozen trunk | Anna ≠ Karen without weight fork |
+| **EPO** Enterprise Preference Optimization | Org-specific prefs + compliance | Auditability, deterministic tool arguments |
 
 ### System behavior priors
 
@@ -404,7 +404,7 @@ Gate: Stage N promotes only if NX suite + MoE health pass — not MMLU alone.
                     └─────────────────┬──────────────────────┘
                                       ▼
                     ┌────────────────────────────────────────┐
-                    │ LM Head · Digital Employee decoding     │
+                    │ LM Head · protocol-constrained decoding │
                     │ + Memory / Tool / Workflow special toks │
                     └────────────────────────────────────────┘
                                       ▼
@@ -448,7 +448,7 @@ Gate: Stage N promotes only if NX suite + MoE health pass — not MMLU alone.
 
 9. Stage2 A35B on B300 (or large H200) cluster.  
 10. Freeze A35B as **weight parent** for MoE experts.  
-11. SFT/DPO pilot on A35B → Digital Employee behavior.
+11. SFT/DPO pilot on A35B → Input → Analysis → Answer protocol.
 
 ### Phase D — MoE 480B (months 5–10+)
 
