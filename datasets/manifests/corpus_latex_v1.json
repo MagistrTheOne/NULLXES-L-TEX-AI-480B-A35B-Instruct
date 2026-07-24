@@ -1,6 +1,7 @@
 {
   "name": "latex-v1",
   "version": "1.0",
+  "status": "not_built",
   "mix": {
     "code": 0.35,
     "multilingual": 0.35,
@@ -8,53 +9,11 @@
     "scientific": 0.1,
     "synthetic_structure": 0.05
   },
-  "token_mode": "estimated_from_chars",
+  "token_mode": "pending",
   "stage": "foundation_bootstrapping",
-  "notes": "Filtered + deduplicated LÆTEX V1. Small by design: the goal is a proven pipeline, not world knowledge. Not a pretraining corpus.",
+  "notes": "Stub only. datasets/latex_v1/ is gitignored. Run: python scripts/build_corpus_v1.py --config configs/datasets_latex_v1.yaml — then train_tokenizer.py. Do not train the tokenizer against this file.",
   "split": "train",
-  "shards": {
-    "multilingual": {
-      "files": [
-        "datasets/latex_v1/train/multilingual/shard_0000.jsonl"
-      ],
-      "docs": 34,
-      "chars": 5175
-    },
-    "synthetic_structure": {
-      "files": [
-        "datasets/latex_v1/train/synthetic_structure/shard_0000.jsonl"
-      ],
-      "docs": 84,
-      "chars": 25139
-    },
-    "code": {
-      "files": [
-        "datasets/latex_v1/train/code/shard_0000.jsonl"
-      ],
-      "docs": 142,
-      "chars": 1667377
-    },
-    "enterprise": {
-      "files": [
-        "datasets/latex_v1/train/enterprise/shard_0000.jsonl"
-      ],
-      "docs": 30,
-      "chars": 4574
-    },
-    "scientific": {
-      "files": [
-        "datasets/latex_v1/train/scientific/shard_0000.jsonl"
-      ],
-      "docs": 32,
-      "chars": 5635
-    }
-  },
-  "tokens_by_bucket": {
-    "multilingual": 1437,
-    "synthetic_structure": 6983,
-    "code": 463160,
-    "enterprise": 1270,
-    "scientific": 1565
-  },
-  "tokens_total": 474415
+  "shards": {},
+  "tokens_by_bucket": {},
+  "tokens_total": 0
 }

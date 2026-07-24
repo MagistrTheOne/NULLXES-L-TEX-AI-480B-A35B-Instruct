@@ -13,9 +13,14 @@ from latex_tokenizer.corpus import (
     iter_jsonl_shard,
     iter_manifest_texts,
     iter_sample_dir,
+    manifest_shard_paths,
     write_train_corpus,
 )
 from latex_tokenizer.normalize import normalize_text
+
+# Non-smoke V1 training must see a real corpus, not fertility probes alone.
+# Nine sample files under tests/tokenizer_samples is the silent-fail signature.
+_MIN_CORPUS_DOCS_FULL = 10_000
 
 
 class PretrainedLoadForbidden(RuntimeError):
@@ -66,27 +71,65 @@ def prepare_corpus(cfg: dict[str, Any], runtime: dict[str, Any], smoke: bool) ->
         if not manifest_path.is_absolute():
             manifest_path = repo_guess / manifest_path
 
+    corpus_docs = 0
+    sample_docs = 0
+    missing_shards: list[str] = []
+
     def gen():
+        nonlocal corpus_docs, sample_docs, missing_shards
         if manifest_path.is_file():
             man = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if man.get("status") == "not_built":
+                raise FileNotFoundError(
+                    f"{manifest_path} is a stub (status=not_built). "
+                    "Run: python scripts/build_corpus_v1.py "
+                    "--config configs/datasets_latex_v1.yaml"
+                )
+            _existing, missing_shards = manifest_shard_paths(man, repo_guess)
+            if missing_shards and not smoke:
+                preview = ", ".join(missing_shards[:5])
+                more = f" (+{len(missing_shards) - 5} more)" if len(missing_shards) > 5 else ""
+                raise FileNotFoundError(
+                    f"Corpus manifest lists {len(missing_shards)} missing shard(s): "
+                    f"{preview}{more}. "
+                    "datasets/latex_v1/ is gitignored — rebuild with "
+                    "python scripts/build_corpus_v1.py --config configs/datasets_latex_v1.yaml"
+                )
             for text in iter_manifest_texts(man, repo_guess):
+                corpus_docs += 1
                 yield normalize_text(text)
         else:
             shards = discover_shards(dataset_path)
             for shard in shards:
                 for text in iter_jsonl_shard(shard):
+                    corpus_docs += 1
                     yield normalize_text(text)
         # Always include fixed fertility probes
         samples = Path(cfg["paths"]["samples_dir"])
         for _, text in iter_sample_dir(samples):
+            sample_docs += 1
             yield normalize_text(text)
 
     max_chars = 5_000_000 if smoke else None
     n = write_train_corpus(gen(), corpus_path, max_chars=max_chars)
+    print(
+        f"[tokenizer-corpus] lines={n} corpus_docs={corpus_docs} "
+        f"sample_docs={sample_docs} manifest={manifest_path}",
+        flush=True,
+    )
     if n == 0:
         raise FileNotFoundError(
-            f"No training text. Run: python scripts/build_seed_corpus.py "
+            f"No training text. Run: python scripts/build_corpus_v1.py "
+            f"--config configs/datasets_latex_v1.yaml "
             f"(looked for {manifest_path} and {dataset_path})"
+        )
+    if not smoke and corpus_docs < _MIN_CORPUS_DOCS_FULL:
+        raise RuntimeError(
+            f"Tokenizer corpus too small for full vocab: corpus_docs={corpus_docs} "
+            f"(min {_MIN_CORPUS_DOCS_FULL}), sample_docs={sample_docs}. "
+            "Refusing to train — this would pad with <|unused_*|>. "
+            "Finish build_corpus_v1.py first, then re-run train_tokenizer.py "
+            "without --smoke."
         )
     return corpus_path
 

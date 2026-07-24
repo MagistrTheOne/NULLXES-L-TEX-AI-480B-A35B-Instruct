@@ -57,15 +57,32 @@ def discover_shards(dataset_path: Path) -> list[Path]:
     return []
 
 
-def iter_manifest_texts(manifest: dict[str, Any], repo_root: Path) -> Iterator[str]:
-    """Yield texts following manifest shard list (all docs, bucket by bucket)."""
+def manifest_shard_paths(
+    manifest: dict[str, Any], repo_root: Path
+) -> tuple[list[Path], list[str]]:
+    """Return (existing shard paths, missing relative paths) from a corpus manifest."""
     shards = manifest.get("shards") or {}
-    for bucket in (manifest.get("mix") or shards).keys():
+    existing: list[Path] = []
+    missing: list[str] = []
+    buckets = list((manifest.get("mix") or shards).keys()) or list(shards.keys())
+    for bucket in buckets:
         meta = shards.get(bucket) or {}
         for rel in meta.get("files") or []:
-            path = repo_root / rel
+            path = Path(rel)
+            if not path.is_absolute():
+                path = repo_root / rel
             if path.is_file():
-                yield from iter_jsonl_shard(path)
+                existing.append(path)
+            else:
+                missing.append(str(rel))
+    return existing, missing
+
+
+def iter_manifest_texts(manifest: dict[str, Any], repo_root: Path) -> Iterator[str]:
+    """Yield texts following manifest shard list (all docs, bucket by bucket)."""
+    existing, _missing = manifest_shard_paths(manifest, repo_root)
+    for path in existing:
+        yield from iter_jsonl_shard(path)
 
 
 def iter_sample_dir(samples_dir: Path) -> Iterator[tuple[str, str]]:
