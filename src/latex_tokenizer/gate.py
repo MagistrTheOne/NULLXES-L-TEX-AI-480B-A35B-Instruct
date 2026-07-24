@@ -77,6 +77,12 @@ def check_artifact(artifact_dir: str | Path, expected_vocab: int) -> dict[str, A
     export = meta.get("vocab_size_export")
     if export is not None and int(export) != int(expected_vocab):
         errors.append(f"vocab_size_export={export} expected {expected_vocab}")
+    if meta.get("vocab_padded"):
+        trained = meta.get("vocab_size_trained")
+        errors.append(
+            f"vocab_padded=true — only {trained} real pieces, rest are <|unused_*|>; "
+            "the corpus was too small to fill the vocabulary"
+        )
 
     errors.extend(_special_id_errors(artifact_dir))
 
