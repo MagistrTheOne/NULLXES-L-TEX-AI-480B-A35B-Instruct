@@ -1,0 +1,136 @@
+# LÆTEX V1 corpus — foundation bootstrapping input.
+#
+# Target: 300-400M unique tokens. That is small for a 20B model and it is a
+# deliberate choice: the goal of V1 is a proven architecture / tokenizer /
+# training / generation / QA loop, not world knowledge. Reports must call this
+# stage foundation bootstrapping, never pretraining.
+#
+# Pipeline:
+#   1. python scripts/download_local_corpus.py --config configs/datasets_latex_v1.yaml
+#   2. python scripts/build_corpus_v1.py --config configs/datasets_latex_v1.yaml
+#
+# Step 1 fetches permissively licensed samples. Step 2 does the actual work:
+# subsample, filter, dedup, and split the holdout.
+name: latex-v1
+version: "1.0"
+
+output_dir: datasets/raw/shards/latex_v1
+manifest: datasets/manifests/corpus_latex_v1_raw.json
+
+# Post-filter output
+build:
+  train_dir: datasets/latex_v1/train
+  holdout_dir: datasets/latex_v1/holdout
+  train_manifest: datasets/manifests/corpus_latex_v1.json
+  holdout_manifest: datasets/manifests/corpus_latex_v1_holdout.json
+  holdout_ratio: 0.005
+  seed: 42
+  # Canon: exempt from prose filters, always in train, never in holdout
+  protected_source_prefixes: [nullxes_]
+  # Rough estimate until the v1 tokenizer exists; pass --tokenizer afterwards
+  # to record measured counts in the manifest.
+  chars_per_token_estimate: 3.6
+  target_tokens_min: 300_000_000
+  target_tokens_max: 400_000_000
+
+mix:
+  code: 0.35
+  multilingual: 0.35
+  enterprise: 0.15
+  scientific: 0.10
+  synthetic_structure: 0.05
+
+filters:
+  min_chars: 200
+  max_chars: 40000
+  code_max_chars: 100000
+  min_words: 30
+  languages: [ru, en, code, zh]
+  max_symbol_ratio: 0.25
+  max_digit_ratio: 0.30
+  max_duplicate_line_ratio: 0.35
+  max_top_word_ratio: 0.18
+  drop_marketing: true
+  drop_boilerplate: true
+  drop_secrets: true
+
+dedup:
+  hamming_threshold: 3
+
+defaults:
+  max_docs_per_source: 40000
+  max_chars_per_doc: 20000
+  seed: 42
+
+sources:
+  # --- code: permissive licenses only ---
+  - id: mbpp
+    hub: google-research-datasets/mbpp
+    split: train
+    streaming: false
+    text_field: code
+    text_prefix_field: text
+    bucket: code
+    max_docs: 974
+
+  - id: codealpaca
+    hub: HuggingFaceH4/CodeAlpaca_20K
+    split: train
+    streaming: false
+    text_field: completion
+    text_prefix_field: prompt
+    bucket: code
+    max_docs: 18000
+
+  - id: python_codes
+    hub: flytech/python-codes-25k
+    split: train
+    streaming: true
+    text_field: output
+    text_prefix_field: instruction
+    bucket: code
+    max_docs: 25000
+
+  # --- multilingual: RU/EN technical and business prose ---
+  - id: wiki_en
+    hub: wikimedia/wikipedia
+    config: 20231101.en
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 40000
+
+  - id: wiki_ru
+    hub: wikimedia/wikipedia
+    config: 20231101.ru
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 40000
+
+  # --- enterprise: working dialogue and document structure ---
+  - id: oasst1
+    hub: OpenAssistant/oasst1
+    split: train
+    streaming: true
+    text_field: text
+    bucket: enterprise
+    max_docs: 15000
+
+  # --- scientific: technical documentation register ---
+  - id: pes2o_light
+    hub: allenai/peS2o
+    revision: refs/convert/parquet
+    split: train
+    streaming: true
+    text_field: text
+    bucket: scientific
+    max_docs: 12000
+
+# NULLXES canon (identity, answer protocol, structured slots) — 1-2% of the mix.
+# Built by scripts/build_identity_corpus.py, never downloaded.
+local_identity:
+  enabled: true
+  manifest: datasets/manifests/pretrain_stage0.json

@@ -1,0 +1,120 @@
+# NULLXES-LÆTEX Tokenizer v1 — trained on the LÆTEX V1 corpus, vocab 131072.
+#
+#   python scripts/build_corpus_v1.py --config configs/datasets_latex_v1.yaml
+#   python scripts/train_tokenizer.py --config configs/tokenizer_latex_v1.yaml
+#   python scripts/evaluate_tokenizer.py --config configs/tokenizer_latex_v1.yaml
+#
+# No --smoke. A smoke artifact is rejected by src/latex_tokenizer/gate.py at
+# init and train time, so freezing one here would only surface later as a
+# startup failure.
+name: latex-tokenizer-v1
+version: "1.0"
+vocab_size: 131072
+model_type: unigram
+byte_fallback: true
+normalization: nfkc
+seed: 42
+
+sentencepiece:
+  use_trainer_library: true
+  allow_pretrained_load: false
+  character_coverage: 0.9995
+  num_threads: 0
+  seed_sentencepiece_size: 1000000
+  max_sentence_length: 262144
+
+# Matches the V1 corpus mix: RU/EN prose and code carry the model, canon is 5%.
+corpus_mix:
+  multilingual: 0.35
+  code: 0.35
+  enterprise: 0.15
+  scientific: 0.10
+  synthetic_structure: 0.05
+
+synthetic_bans:
+  - personality
+  - tone
+  - persona_dialogue
+  - brand_slogans
+  - digital_entity_framing
+
+special_tokens:
+  pad:
+    token: "<|pad|>"
+    id: 0
+  unk:
+    token: "<|unk|>"
+    id: 1
+  bos:
+    token: "<|bos|>"
+    id: 2
+  eos:
+    token: "<|eos|>"
+    id: 3
+  agent:
+    token: "<|agent|>"
+    id: 4
+  tool_call:
+    token: "<|tool_call|>"
+    id: 5
+  memory:
+    token: "<|memory|>"
+    id: 6
+  identity:
+    token: "<|identity|>"
+    id: 7
+  workflow:
+    token: "<|workflow|>"
+    id: 8
+  system:
+    token: "<|system|>"
+    id: 9
+  user:
+    token: "<|user|>"
+    id: 10
+  assistant:
+    token: "<|assistant|>"
+    id: 11
+
+fertility:
+  ru_chars_per_token: [2.5, 4.0]
+  en_chars_per_token: [3.0, 5.0]
+  en_technical_min: 3.0
+  ru_technical_min: 2.2
+
+# Blocking gate, separate from fertility. Slot tokens must be exactly one id and
+# brand concepts must not be shredded into characters — a tokenizer can pass
+# every fertility band and still break every structured sample in the corpus.
+concept_regression:
+  concepts:
+    - "NULLXES"
+    - "LÆTEX"
+    - "FOUNDATION"
+    - "MODEL"
+    - "NULLXES-LÆTEX"
+    - "LÆTEX-NULLXES FOUNDATION MODEL"
+
+paths:
+  samples_dir: tests/tokenizer_samples
+  artifact_dir: tokenizer/latex-v1
+  runtime_config: configs/runtime.yaml
+  corpus_manifest: datasets/manifests/corpus_latex_v1.json
+  corpus_config: configs/corpus_gate0.yaml
+
+fragmentation_must_not_char_split:
+  - "NULLXES-LÆTEX"
+  - "LÆTEX-NULLXES FOUNDATION MODEL"
+  - "gpt-4.1-mini"
+  - "OpenAIRealtimeAPI"
+  - "ИНН2311391270"
+  - "RFC-9457"
+  - "KubernetesOperator"
+  - "customer_support.workflow"
+  - "<|tool_call|>"
+  - "<|memory|>"
+  - "<|workflow|>"
+  - "<|agent|>"
+  - "<|identity|>"
+  - "<|system|>"
+  - "<|user|>"
+  - "<|assistant|>"

@@ -1,0 +1,19 @@
+{
+  "name": "latex-v1",
+  "version": "1.0",
+  "mix": {
+    "code": 0.35,
+    "multilingual": 0.35,
+    "enterprise": 0.15,
+    "scientific": 0.1,
+    "synthetic_structure": 0.05
+  },
+  "token_mode": "estimated_from_chars",
+  "stage": "foundation_bootstrapping",
+  "notes": "Filtered + deduplicated LÆTEX V1. Small by design: the goal is a proven pipeline, not world knowledge. Not a pretraining corpus.",
+  "split": "holdout",
+  "holdout_ratio": 0.005,
+  "shards": {},
+  "tokens_by_bucket": {},
+  "tokens_total": 0
+}

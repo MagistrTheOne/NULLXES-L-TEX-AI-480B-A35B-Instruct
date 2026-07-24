@@ -14,6 +14,8 @@ venv/
 # Large corpora (keep seed + manifests + schema in git)
 datasets/raw/
 datasets/processed/
+# Filter/dedup output of build_corpus_v1.py — regenerable from raw + manifests
+datasets/latex_v1/
 checkpoints/
 !checkpoints/.gitkeep
 20B-G/datasets/raw/
