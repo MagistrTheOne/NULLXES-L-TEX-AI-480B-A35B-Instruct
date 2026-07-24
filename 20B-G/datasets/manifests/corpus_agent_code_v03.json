@@ -1,0 +1,35 @@
+{
+  "name": "latex-agent-code-v03-seed-only",
+  "version": "0.3-seed",
+  "mix_note": "seed-only placeholder; replace via download_corpus.sh",
+  "mix": {
+    "code": 0.6,
+    "multilingual": 0.25,
+    "enterprise": 0.1,
+    "synthetic_structure": 0.05
+  },
+  "shards": {
+    "synthetic_structure": {
+      "files": [
+        "20B-G/datasets/seed/agent/nullxes_faq.jsonl",
+        "20B-G/datasets/seed/agent/magistr_grok_spice.jsonl"
+      ],
+      "docs": 13
+    },
+    "enterprise": {
+      "files": [
+        "20B-G/datasets/seed/agent/tool_call.jsonl"
+      ],
+      "docs": 8
+    },
+    "code": {
+      "files": [
+        "20B-G/datasets/seed/agent/tool_call.jsonl"
+      ],
+      "docs": 0
+    }
+  },
+  "sources_ok": [
+    "agent_seed"
+  ]
+}

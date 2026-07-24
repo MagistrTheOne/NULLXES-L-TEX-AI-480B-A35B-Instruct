@@ -1,0 +1,24 @@
+# DPO stub — 20B-G baby (NOT implemented yet)
+# Run only after SFT checkpoint exists and mid-eval passes.
+stage: stage0_2b_dpo_stub
+model:
+  name: nullxes-latex-2b
+  checkpoint: 20B-G/checkpoints/latex-2b-sft
+  tokenizer: 20B-G/tokenizer/latex-v0.3
+
+dpo:
+  enabled: false
+  status: stub
+  preference_pairs: 20B-G/datasets/sft/dpo_pairs_stub.jsonl
+  beta: 0.1
+  lr: 5.0e-7
+  max_steps: 250
+  output_dir: 20B-G/checkpoints/latex-2b-dpo
+  objectives:
+    - prefer_tool_call_schema_over_prose
+    - prefer_code_fix_over_hallucinated_apis
+    - prefer_magistr_grok_tone_over_corporate_fluff
+    - reject_digital_employee_persona_coaching
+  notes: |
+    Wire to a real DPO trainer (TRL / custom) after iter5+SFT prove mix.
+    Do not start DPO on random or genesis weights.

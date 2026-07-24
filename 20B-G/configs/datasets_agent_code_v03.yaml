@@ -1,0 +1,92 @@
+# 20B-G agent+code mix — code60 / chat+agent35 / canon5
+# Bucket mapping (schema-compatible):
+#   code → 0.60
+#   multilingual + enterprise → chat+agent ≈ 0.35
+#   synthetic_structure → NULLXES canon 0.05
+name: latex-agent-code-v03
+version: "0.3"
+
+output_dir: 20B-G/datasets/raw/shards/hf_v03
+manifest: 20B-G/datasets/manifests/corpus_agent_code_v03.json
+
+mix:
+  code: 0.60
+  multilingual: 0.25
+  enterprise: 0.10
+  synthetic_structure: 0.05
+
+defaults:
+  max_docs_per_source: 15000
+  max_chars_per_doc: 10000
+  seed: 42
+
+sources:
+  # --- code ~0.60 ---
+  - id: mbpp
+    hub: google-research-datasets/mbpp
+    split: train
+    streaming: false
+    text_field: code
+    text_prefix_field: text
+    bucket: code
+    max_docs: 974
+
+  - id: codealpaca
+    hub: HuggingFaceH4/CodeAlpaca_20K
+    split: train
+    streaming: false
+    text_field: completion
+    text_prefix_field: prompt
+    bucket: code
+    max_docs: 12000
+
+  - id: python_codes
+    hub: flytech/python-codes-25k
+    split: train
+    streaming: true
+    text_field: output
+    text_prefix_field: instruction
+    bucket: code
+    max_docs: 15000
+
+  # --- multilingual / chat proxy ---
+  - id: wiki_en
+    hub: wikimedia/wikipedia
+    config: 20231101.en
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 12000
+
+  - id: wiki_ru
+    hub: wikimedia/wikipedia
+    config: 20231101.ru
+    split: train
+    streaming: true
+    text_field: text
+    bucket: multilingual
+    max_docs: 10000
+
+  - id: oasst1
+    hub: OpenAssistant/oasst1
+    split: train
+    streaming: true
+    text_field: text
+    bucket: enterprise
+    max_docs: 8000
+
+  # --- scientific light (fills enterprise/chat diversity if needed) ---
+  - id: pes2o_light
+    hub: allenai/peS2o
+    revision: refs/convert/parquet
+    split: train
+    streaming: true
+    text_field: text
+    bucket: enterprise
+    max_docs: 4000
+
+# Canon + agent seed merged after build_agent_seed.py
+local_identity:
+  enabled: true
+  manifest: 20B-G/datasets/manifests/agent_seed_v03.json

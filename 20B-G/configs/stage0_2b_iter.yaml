@@ -1,0 +1,92 @@
+# 20B-G baby pretrain — one iteration = 250 steps (~8.2M tokens)
+# Math: seq=1024 × micro=8 × accum=4 → 32768 tok/step × 250 ≈ 8.192M
+# run_iter_train.sh overrides resume_from + output_dir per iter.
+stage: stage0_2b_iter
+model:
+  name: nullxes-latex-2b
+  architecture: nhat_dense
+  n_layers: 24
+  d_model: 2048
+  n_heads: 16
+  n_kv_heads: 4
+  d_head: 128
+  d_ff: 7168
+  vocab_size: 131072
+  max_seq_len: 4096
+  rope_theta: 500000.0
+  rope_scaling:
+    enabled: true
+    target_context: 16384
+  norm: rmsnorm
+  activation: swiglu
+  attention: gqa
+  hybrid_attention:
+    enabled: true
+    local_window: 2048
+    full_every: 4
+    local_rope: true
+    global_nope: true
+    pattern:
+      local_layers: 3
+      global_layer: 1
+  depth_nope_ratio: 0.25
+  tie_embeddings: false
+  qk_norm: true
+  z_loss_coeff: 1.0e-5
+  no_bias: true
+
+tokenizer:
+  name: nullxes-latex-v0.3
+  vocab_size: 131072
+  special_tokens_file: 20B-G/tokenizer/latex-v0.3/special_tokens.json
+  artifact_dir: 20B-G/tokenizer/latex-v0.3
+
+init:
+  scheme: mup
+  base_width: 2048
+  base_depth: 24
+  std: 0.02
+  residual_scale:
+    type: deepnorm
+    value: "0.02 / sqrt(2*n_layers)"
+
+checkpoint:
+  format: safetensors
+  save_every_steps: 250
+  output_dir: 20B-G/checkpoints/latex-2b-iter1
+
+training:
+  enabled: true
+  precision: bf16
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  eps: 1.0e-8
+  weight_decay: 0.1
+  lr: 3.0e-4
+  schedule: wsd
+  warmup_ratio: 0.08
+  grad_clip: 1.0
+  gradient_checkpointing: true
+  seq_len: 1024
+  micro_batch_size: 8
+  grad_accum_steps: 4
+  # 250 steps × 32768 ≈ 8.192M — also pass --max-steps 250
+  tokens_target: 8_192_000
+  log_every: 10
+  # Keep soft-id low (anti Soft-identity 90%)
+  identity_upsample: 1
+  mantra_mix: 0.02
+  soft_identity_mix: 0.02
+  identity_loss_weight: 1.0
+  mantra_loss_weight: 1.2
+  corpus_manifest: 20B-G/datasets/manifests/corpus_agent_code_v03.json
+  resume_from: 20B-G/checkpoints/latex-2b-genesis
+
+hardware:
+  provider: runpod
+  accelerator: cuda
+  gpu: RTX_PRO_6000
+  cluster:
+    nodes: 1
+    gpus: 1

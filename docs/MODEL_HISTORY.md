@@ -131,6 +131,27 @@ Hub tokenizer: https://huggingface.co/MagistrTheOne/NULLXES-L-TEX-Tokenizer-v0.2
 
 ---
 
+## 20B-G — Baby ~2B agent+code iterations (scaffold)
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-07-24 |
+| Isolation | **`20B-G/`** (does not touch root Stage0a / v0.2 / 20B genesis ckpt) |
+| Model | ~2B dense NHAT (`20B-G/configs/nullxes_latex_2b.yaml`) |
+| Tokenizer | **v0.3** vocab 131072 → `20B-G/tokenizer/latex-v0.3/` |
+| Train shape | **5 × 250 steps** (~8.2M tok/iter, ~41M total) |
+| Mix | code **0.60** / chat+agent **0.35** / canon **0.05** |
+| Style | Magistr × Grok spice ≤2%; no Digital Employees |
+| Docs | `20B-G/docs/16_LATEX_BABY_ITER.md` · pointer `docs/16_LATEX_BABY_ITER.md` |
+| Hub (planned) | Tokenizer-v0.3 · optional 2B-Baby-v0.3 — **not** overwrite 20B Genesis |
+| Status | Scaffold + configs + scripts ready; run download → tok → init → iters on pod |
+
+### Decision
+
+Keep 20B Genesis as trunk. Prove mix on baby inside `20B-G/` first.
+
+---
+
 ## Template for later entries
 
 ```

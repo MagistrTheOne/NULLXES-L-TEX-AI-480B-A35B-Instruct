@@ -16,6 +16,10 @@ datasets/raw/
 datasets/processed/
 checkpoints/
 !checkpoints/.gitkeep
+20B-G/datasets/raw/
+20B-G/checkpoints/**
+!20B-G/checkpoints/.gitkeep
+!20B-G/checkpoints/.gitignore
 *.pt
 *.bin
 *.safetensors
@@ -33,6 +37,15 @@ tokenizer/**/meta.json
 tokenizer/**/gate0_report*.json
 !tokenizer/latex-v0.1/special_tokens.json
 !tokenizer/latex-v0.1/.gitkeep
+20B-G/tokenizer/**/tmp/
+20B-G/tokenizer/**/tokenizer.model
+20B-G/tokenizer/**/vocab.json
+20B-G/tokenizer/**/checksum.sha256
+20B-G/tokenizer/**/meta.json
+20B-G/tokenizer/**/gate0_report*.json
+!20B-G/tokenizer/latex-v0.3/special_tokens.json
+!20B-G/tokenizer/latex-v0.3/FREEZE.md
+!20B-G/tokenizer/latex-v0.3/.gitkeep
 
 # IDE / OS
 .idea/

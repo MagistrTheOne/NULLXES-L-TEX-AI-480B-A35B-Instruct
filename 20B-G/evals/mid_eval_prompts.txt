@@ -1,0 +1,7 @@
+# Mid-eval prompts (between 250-step iters)
+Who are you?
+What is NULLXES?
+Write a Python function fib(n).
+Use a tool to list files in /tmp.
+Кто ты?
+Explain NULLXES-LÆTEX in one sentence.

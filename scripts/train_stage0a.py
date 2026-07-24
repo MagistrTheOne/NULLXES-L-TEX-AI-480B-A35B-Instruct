@@ -190,7 +190,12 @@ def main() -> int:
     resume = args.resume or train_cfg.get("resume_from") or ""
     resume_path = ROOT / resume if resume else None
 
-    if resume_path and (resume_path / "model.safetensors").is_file():
+    def _has_hf_weights(p: Path) -> bool:
+        return (p / "model.safetensors").is_file() or (
+            p / "model.safetensors.index.json"
+        ).is_file()
+
+    if resume_path and _has_hf_weights(resume_path):
         _log(f"[model] resume from {resume_path} …")
         model = LatexForCausalLM.from_pretrained(resume_path)
         model = model.to(device=device, dtype=dtype)
