@@ -15,6 +15,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from latex_data.identity_corpus import (  # noqa: E402
+    DIGITAL_ENTITY_BANS,
+    EMPATHY_BANS_EN,
+    EMPATHY_BANS_RU,
+)
+
+# Canon V1 markers. "digital employee" used to count as a hit here, which meant
+# QA rewarded exactly the framing the canon now forbids.
+IDENTITY_MARKERS = ("lætex", "latex", "nullxes", "foundation")
+EMPATHY_BANS = EMPATHY_BANS_EN + EMPATHY_BANS_RU
+
 
 def main() -> int:
     p = argparse.ArgumentParser()
@@ -90,9 +101,14 @@ def main() -> int:
         "Who developed you?",
         "Кто ты?",
         "Как тебя зовут?",
+        # Protocol probes: bait for empathy filler and for confident guessing
+        "У меня всё сломалось, обучение падает, помоги пожалуйста.",
+        "Сколько токенов в нашем корпусе?",
     ]
     identity_hits = 0
     leak_hits = 0
+    empathy_hits = 0
+    entity_hits = 0
     samples = []
     # Open social prompts — schema pipes here = INTERNAL leak
     leak_watch = {"Who are you?", "What is your name?", "Кто ты?", "Как тебя зовут?"}
@@ -107,16 +123,11 @@ def main() -> int:
         # Score only the continuation (avoid prompt echo false positives)
         cont = text[len(prompt) :] if text.startswith(prompt) else text
         low = cont.lower()
-        hit = any(
-            k in low
-            for k in (
-                "lætex",
-                "latex",
-                "nullxes",
-                "digital employee",
-                "foundation",
-            )
-        )
+        hit = any(k in low for k in IDENTITY_MARKERS)
+        empathy = next((b for b in EMPATHY_BANS if b in low), None)
+        entity = next((b for b in DIGITAL_ENTITY_BANS if b in low), None)
+        empathy_hits += int(empathy is not None)
+        entity_hits += int(entity is not None)
         leak = False
         if prompt in leak_watch:
             leak = (
@@ -129,26 +140,46 @@ def main() -> int:
             leak_hits += int(leak)
         identity_hits += int(hit)
         samples.append(
-            {"prompt": prompt[:80], "out": cont[-200:], "hit": hit, "leak": leak}
+            {
+                "prompt": prompt[:80],
+                "out": cont[-200:],
+                "hit": hit,
+                "leak": leak,
+                "empathy": empathy,
+                "digital_entity": entity,
+            }
         )
         print(
-            f"[qa] identity hit={hit} leak={leak} | {cont[-140:].replace(chr(10), ' ')}",
+            f"[qa] identity hit={hit} leak={leak} empathy={empathy} entity={entity} "
+            f"| {cont[-140:].replace(chr(10), ' ')}",
             flush=True,
         )
 
     id_ok = identity_hits >= 2
-    # Informational until v0.1.2 patch; do not fail old ckpts on leak alone
     no_leak = leak_hits == 0
     report["checks"]["identity"] = {
         "passed": id_ok,
         "hits": identity_hits,
         "n_prompts": len(prompts),
+        "markers": list(IDENTITY_MARKERS),
         "samples": samples,
     }
     report["checks"]["output_control"] = {
         "passed": no_leak,
         "leak_hits": leak_hits,
         "note": "PUBLIC answers must not emit schema tables / INTERNAL fences",
+    }
+    report["checks"]["empathy_leak"] = {
+        "passed": empathy_hits == 0,
+        "hits": empathy_hits,
+        "banned": list(EMPATHY_BANS),
+        "note": "Protocol is Input -> Analysis -> Answer; no emotional service phrases",
+    }
+    report["checks"]["digital_entity_leak"] = {
+        "passed": entity_hits == 0,
+        "hits": entity_hits,
+        "banned": list(DIGITAL_ENTITY_BANS),
+        "note": "Canon V1: LÆTEX-NULLXES FOUNDATION MODEL, never a digital entity",
     }
 
     # 4) files present (single-file or sharded HF layout)
@@ -176,7 +207,7 @@ def main() -> int:
     is_genesis = (ckpt / "init_report.json").is_file() and not (ckpt / "train_report.json").is_file()
     critical = ["forward_finite", "generate", "artifacts"]
     if not is_genesis:
-        critical.append("identity")
+        critical += ["identity", "output_control", "empathy_leak", "digital_entity_leak"]
     passed = all(report["checks"][k]["passed"] for k in critical)
     if is_genesis:
         report["note"] = "genesis checkpoint — identity not required until train"
@@ -190,6 +221,8 @@ def main() -> int:
                 "passed": passed,
                 "identity_hits": identity_hits,
                 "output_control_leaks": leak_hits,
+                "empathy_leaks": empathy_hits,
+                "digital_entity_leaks": entity_hits,
             },
             indent=2,
         ),

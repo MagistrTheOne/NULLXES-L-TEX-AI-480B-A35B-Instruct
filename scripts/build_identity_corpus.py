@@ -32,11 +32,12 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from latex_data.identity_corpus import (  # noqa: E402
     architecture_docs,
-    digital_employee_docs,
     enterprise_ai_docs,
+    enterprise_format_docs,
     identity_docs,
     identity_mantra_docs,
     output_control_rule_docs,
+    response_protocol_docs,
     sft_identity_examples,
     technical_reasoning_docs,
 )
@@ -161,6 +162,7 @@ def build_manifests(repo: Path) -> None:
             "datasets/raw/shards/identity/nullxes_identity.jsonl",
             "datasets/raw/shards/identity/identity_mantra.jsonl",
             "datasets/raw/shards/identity/output_control_rules.jsonl",
+            "datasets/raw/shards/identity/response_protocol.jsonl",
         ],
         "code": [
             "datasets/raw/shards/code/nullxes_repo_clean.jsonl",
@@ -169,7 +171,7 @@ def build_manifests(repo: Path) -> None:
             "datasets/raw/shards/code/infrastructure.jsonl",
         ],
         "enterprise": [
-            "datasets/raw/shards/docs/digital_employee.jsonl",
+            "datasets/raw/shards/docs/enterprise_format.jsonl",
             "datasets/raw/shards/docs/enterprise_ai.jsonl",
         ],
         "scientific": [
@@ -215,8 +217,8 @@ def build_manifests(repo: Path) -> None:
             "shards": shards,
             "totals": totals,
             "notes": (
-                "Identity + repo code + seed. "
-                "Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT."
+                "Canon V1: identity + answer protocol + repo code + seed. "
+                "Foundation bootstrapping input — not a full pretraining corpus."
             ),
         }
 
@@ -241,7 +243,10 @@ def main() -> int:
     n_rules = write_jsonl(
         raw / "identity" / "output_control_rules.jsonl", output_control_rule_docs()
     )
-    n_de = write_jsonl(raw / "docs" / "digital_employee.jsonl", digital_employee_docs())
+    n_proto = write_jsonl(
+        raw / "identity" / "response_protocol.jsonl", response_protocol_docs()
+    )
+    n_de = write_jsonl(raw / "docs" / "enterprise_format.jsonl", enterprise_format_docs())
     n_ent = write_jsonl(raw / "docs" / "enterprise_ai.jsonl", enterprise_ai_docs())
     n_rea = write_jsonl(raw / "reasoning" / "technical_reasoning.jsonl", technical_reasoning_docs())
 
@@ -264,7 +269,7 @@ def main() -> int:
                 "id": "nlx-code-frontend-0001",
                 "text": (
                     "File: (none in this research repo)\n\n"
-                    "Description:\nNULLXES Digital Employee UI lives in product repos; "
+                    "Description:\nProduct UI lives in separate repositories; "
                     "this LÆTEX research repository is model/tokenizer/training focused.\n\n"
                     "Code:\n\n// LÆTEX research monorepo has no .tsx surface yet.\n"
                 ),
@@ -315,7 +320,8 @@ def main() -> int:
                     "identity_mantra": n_mantra,
                     "architecture": n_arch,
                     "output_control_rules": n_rules,
-                    "digital_employee": n_de,
+                    "response_protocol": n_proto,
+                    "enterprise_format": n_de,
                     "enterprise_ai": n_ent,
                     "reasoning": n_rea,
                     "repo_code": n_code,

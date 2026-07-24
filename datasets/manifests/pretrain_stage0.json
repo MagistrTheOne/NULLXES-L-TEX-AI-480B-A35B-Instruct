@@ -14,9 +14,10 @@
         "datasets/seed/multilingual/seed_0001.jsonl",
         "datasets/raw/shards/identity/nullxes_identity.jsonl",
         "datasets/raw/shards/identity/identity_mantra.jsonl",
-        "datasets/raw/shards/identity/output_control_rules.jsonl"
+        "datasets/raw/shards/identity/output_control_rules.jsonl",
+        "datasets/raw/shards/identity/response_protocol.jsonl"
       ],
-      "docs": 93
+      "docs": 98
     },
     "code": {
       "files": [
@@ -31,10 +32,10 @@
     "enterprise": {
       "files": [
         "datasets/seed/enterprise/seed_0001.jsonl",
-        "datasets/raw/shards/docs/digital_employee.jsonl",
+        "datasets/raw/shards/docs/enterprise_format.jsonl",
         "datasets/raw/shards/docs/enterprise_ai.jsonl"
       ],
-      "docs": 31
+      "docs": 30
     },
     "scientific": {
       "files": [
@@ -54,12 +55,12 @@
     }
   },
   "totals": {
-    "multilingual": 93,
+    "multilingual": 98,
     "code": 262,
-    "enterprise": 31,
+    "enterprise": 30,
     "scientific": 32,
     "synthetic_structure": 98
   },
-  "notes": "Identity + repo code + seed. Goal: LÆTEX knows its name; Stage0a pretrain next — not 7B random SFT.",
+  "notes": "Canon V1: identity + answer protocol + repo code + seed. Foundation bootstrapping input — not a full pretraining corpus.",
   "status": "READY_FOR_STAGE0A"
 }

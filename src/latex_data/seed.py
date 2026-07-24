@@ -29,35 +29,35 @@ def _rec(i: int, bucket: str, lang: str, text: str) -> dict[str, Any]:
 def multilingual_docs() -> list[dict[str, Any]]:
     docs = []
     ru = [
-        f"NULLXES строит цифровых сотрудников на собственной платформе. Сайт: {SITE} Контакт: {EMAIL}. Реквизиты организации включают {INN}.",
+        f"NULLXES разрабатывает собственную языковую модель LÆTEX. Сайт: {SITE} Контакт: {EMAIL}. Реквизиты организации включают {INN}.",
         "Корпоративный процесс: заявка → проверка политики → эскалация человеку при риске. Workflow id: customer_support.workflow.",
         "Русский технический абзац: KubernetesOperator масштабирует сервисы, RFC-9457 описывает problem details для HTTP API.",
         "Математическая вставка в тексте: сумма x_i^2 ограничена константой; email и URL не должны ломаться нормализатором.",
         "Юридический фрагмент: стороны соглашаются с условиями поставки ПО NULLXES-LÆTEX без передачи персональных данных в веса модели.",
     ]
     en = [
-        f"NULLXES Digital Employees platform. Canonical site {SITE}. Contact {EMAIL}. Tax id probe {INN}.",
+        f"NULLXES-LÆTEX foundation model program. Canonical site {SITE}. Contact {EMAIL}. Tax id probe {INN}.",
         "Enterprise reasoning requires multi-document policy binding and explicit tool_call schemas.",
         "Identifier preservation probes: NULLXES-LÆTEX-AI-480B-A35B, gpt-4.1-mini, OpenAIRealtimeAPI, RFC-9457.",
         "Code and API docs must survive tokenization without punctuation shredding.",
         "Long-context workflows pack memory slots separately from trunk weights.",
     ]
     zh = [
-        f"NULLXES 数字员工平台。官网 {SITE}。联系 {EMAIL}。标识符 KubernetesOperator 与 customer_support.workflow 需完整保留。",
+        f"NULLXES-LÆTEX 基础语言模型。官网 {SITE}。联系 {EMAIL}。标识符 KubernetesOperator 与 customer_support.workflow 需完整保留。",
         "中文技术文本：KubernetesOperator 与 customer_support.workflow 标识符需完整保留，避免按字符切碎。",
         "分词评估需要稳定的中英俄混合文档，而不是虚构的域名；只使用正式站点 nullxesdai.online。",
         "企业文档包含合同条款、流程编号与 API 字段名，以及合规审计所需的结构化日志字段。",
         "科学研究文本可包含公式符号与引用标记，同时保留邮箱与 URL 的连续跨度以便 reconstruction。",
     ]
     de = [
-        f"NULLXES baut digitale Mitarbeiter. Website {SITE}. Kontakt {EMAIL}.",
+        f"NULLXES entwickelt das Sprachmodell LÆTEX. Website {SITE}. Kontakt {EMAIL}.",
         "Deutsche Unternehmensdokumente enthalten Workflow-IDs und Compliance-Hinweise.",
         "Tokenisierung muss Umlaute und Fachbegriffe effizient abbilden.",
         "RFC-9457 und KubernetesOperator sind Fragmentierungsproben.",
         "Keine Persona-Dialoge im Tokenizer-Korpus.",
     ]
     fr = [
-        f"NULLXES construit des employés numériques. Site {SITE}. Contact {EMAIL}.",
+        f"NULLXES développe le modèle de langage LÆTEX. Site {SITE}. Contact {EMAIL}.",
         "Les documents d'entreprise contiennent des identifiants de workflow stables.",
         "Le tokenizer doit respecter le français et les mélanges code/texte.",
         "Les schémas JSON et OpenAPI font partie du mix code/enterprise.",
@@ -146,7 +146,7 @@ def enterprise_docs() -> list[dict[str, Any]]:
         "Policy pack: human escalation required for KYC exceptions; log tool_call and tool_result.",
         "Workflow customer_support.workflow: intake → classify → resolve or escalate.",
         "Enterprise memory is external; trunk weights must not store customer secrets.",
-        "Compliance note: audit trail must record identity_id and role_id separately from IEL.",
+        "Compliance note: audit trail must record identity_id and role_id outside the trunk weights.",
     ]
     for i, t in enumerate(base, 1):
         docs.append(_rec(i, "enterprise", "ru" if i % 2 else "en", t))

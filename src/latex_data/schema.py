@@ -14,7 +14,7 @@ BUCKETS = (
 
 REQUIRED = ("id", "text", "bucket")
 
-# Dialogue / persona coaching only — listing employee names (Anna, …) is allowed.
+# Dialogue / persona coaching only — a name mentioned in prose is allowed.
 # Markers must be LINE-START (after \n or BOS) so Wikipedia "Anna said:" mid-prose is OK.
 PERSONA_BAN_LINE_PREFIXES = (
     "anna said:",
@@ -23,8 +23,12 @@ PERSONA_BAN_LINE_PREFIXES = (
     "anna said “",
     'anna said "',
 )
+# Canon V1: the model is a foundation model, never a persona or a digital entity.
 PERSONA_BAN_SUBSTRINGS = (
     "i am your digital employee",
+    "i am a digital employee",
+    "я твой цифровой сотрудник",
+    "я ваш цифровой сотрудник",
     "my personality is",
     "speaking in a warm tone",
     "as your hr agent i feel",
