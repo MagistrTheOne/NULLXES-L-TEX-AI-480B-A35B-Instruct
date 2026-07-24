@@ -78,3 +78,55 @@ def test_local_layer_ignores_tokens_outside_window() -> None:
     # Last query is 15 positions away from the edited token, window is 4.
     torch.testing.assert_close(out_a[:, -1], out_b[:, -1], rtol=1e-5, atol=1e-5)
     assert not torch.allclose(out_a[:, 0], out_b[:, 0]), "edited position must change"
+
+
+def test_align_key_mask_left_pads_short_masks() -> None:
+    from latex.models.attention import NHATAttention
+
+    short = torch.tensor([[[[0.0, -1e4, 0.0]]]])  # [B,1,Q,3]
+    aligned = NHATAttention._align_key_mask(short, kv_len=7)
+    assert aligned.shape[-1] == 7
+    # Past keys (left) stay attendable; the provided columns sit on the right.
+    assert torch.count_nonzero(aligned[..., :4]) == 0
+    torch.testing.assert_close(aligned[..., -3:], short)
+
+
+def test_cached_decode_accepts_short_padding_mask() -> None:
+    """Short key masks must not crash against a longer KV cache."""
+    model = _tiny_model(local_window=4)
+    attn = model.model.layers[0].self_attn
+    bsz, q_len, past = 2, 2, 8
+    hidden = torch.randn(bsz, q_len, model.config.hidden_size)
+    past_k = torch.randn(bsz, model.config.num_key_value_heads, past, model.config.head_dim)
+    past_v = torch.randn_like(past_k)
+    # Additive mask covering only the current chunk (length q_len), not past+q.
+    mask = torch.zeros(bsz, 1, q_len, q_len)
+    mask[..., 0] = torch.finfo(torch.float32).min
+    cos = torch.zeros(1, 1, q_len, model.config.head_dim)
+    sin = torch.zeros_like(cos)
+
+    with torch.no_grad():
+        out, _, cache = attn(
+            hidden,
+            attention_mask=mask,
+            position_embeddings=(cos, sin),
+            past_key_value=(past_k, past_v),
+            use_cache=True,
+        )
+    assert out.shape == (bsz, q_len, model.config.hidden_size)
+    assert cache[0].shape[2] == past + q_len
+
+
+def test_model_decode_with_2d_mask_shorter_than_kv() -> None:
+    model = _tiny_model(local_window=8)
+    ids = torch.randint(0, model.config.vocab_size, (1, 6))
+    with torch.no_grad():
+        prefill = model(input_ids=ids, use_cache=True)
+        # HF-style: mask grows, but also accept a mask that is only the new token.
+        step = model(
+            input_ids=ids[:, -1:],
+            attention_mask=torch.ones(1, 1, dtype=torch.long),
+            past_key_values=prefill.past_key_values,
+            use_cache=True,
+        )
+    assert step.logits.shape[-1] == model.config.vocab_size

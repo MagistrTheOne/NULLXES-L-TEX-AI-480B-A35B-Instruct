@@ -192,13 +192,16 @@ class LatexModel(LatexPreTrainedModel):
             if attention_mask.dim() == 2:
                 # If all ones and no past — rely on is_causal
                 if not torch.all(attention_mask == 1) or past_key_values_length > 0:
-                    # Expand to [B,1,Q,K]
+                    # Expand to [B,1,Q,K]. When the 2D mask covers only the
+                    # current chunk, left-pad keep-ones for the cached past.
                     k_len = seq_length + past_key_values_length
-                    # pad mask for keys if past
-                    if attention_mask.shape[-1] != k_len:
-                        # assume mask covers full sequence including past when provided shorter
-                        pass
-                    expanded = attention_mask[:, None, None, :].to(dtype=hidden_states.dtype)
+                    key_mask = attention_mask
+                    if key_mask.shape[-1] < k_len:
+                        pad = key_mask.new_ones(key_mask.shape[0], k_len - key_mask.shape[-1])
+                        key_mask = torch.cat([pad, key_mask], dim=-1)
+                    elif key_mask.shape[-1] > k_len:
+                        key_mask = key_mask[:, -k_len:]
+                    expanded = key_mask[:, None, None, :].to(dtype=hidden_states.dtype)
                     attn_mask = (1.0 - expanded) * torch.finfo(hidden_states.dtype).min
             else:
                 attn_mask = attention_mask
