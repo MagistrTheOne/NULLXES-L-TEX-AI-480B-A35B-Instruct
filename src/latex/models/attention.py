@@ -80,26 +80,6 @@ class NHATAttention(nn.Module):
         self._bias_cache = bias
         return bias
 
-    @staticmethod
-    def _align_key_mask(attention_mask: torch.Tensor, kv_len: int) -> torch.Tensor:
-        """Align an additive mask's key axis to `kv_len`.
-
-        Cached decode often hands a mask whose last dim covers only the current
-        chunk (or a short suffix), while `bias` spans the full KV cache. A raw
-        `mask[..., -kv_len:]` does not left-pad: if the mask is shorter than
-        `kv_len` the slice is a no-op and the later add either crashes or
-        silently broadcasts a singleton over every past key.
-        """
-        mask_k = attention_mask.shape[-1]
-        if mask_k == kv_len:
-            return attention_mask
-        if mask_k > kv_len:
-            return attention_mask[..., -kv_len:]
-        # Left-pad with 0 (additive "keep") so past keys stay visible and the
-        # provided columns align to the newest positions on the right.
-        pad = attention_mask.new_zeros(*attention_mask.shape[:-1], kv_len - mask_k)
-        return torch.cat([pad, attention_mask], dim=-1)
-
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -167,7 +147,7 @@ class NHATAttention(nn.Module):
                 q_len, kv_len, past_len, query_states.dtype, hidden_states.device
             )
             if attention_mask is not None:
-                bias = bias + self._align_key_mask(attention_mask, kv_len).to(bias.dtype)
+                bias = bias + attention_mask[..., -kv_len:].to(bias.dtype)
             attn_output = F.scaled_dot_product_attention(
                 query_states,
                 key_states,
