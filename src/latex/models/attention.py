@@ -47,6 +47,39 @@ class NHATAttention(nn.Module):
         self.local_window = config.local_window
         self.attention_dropout = config.attention_dropout
 
+        # Plain attributes, not buffers: never enter state_dict.
+        self._bias_key: tuple | None = None
+        self._bias_cache: Optional[torch.Tensor] = None
+
+    def _causal_bias(
+        self,
+        q_len: int,
+        kv_len: int,
+        past_len: int,
+        dtype: torch.dtype,
+        device: torch.device,
+    ) -> torch.Tensor:
+        """Additive [1, 1, q_len, kv_len] causal mask, windowed on local layers.
+
+        Query i of the current chunk sits at absolute position `past_len + i`,
+        so the same construction covers prefill and cached decode.
+        """
+        key = (q_len, kv_len, past_len, dtype, device, self.is_local, self.local_window)
+        if self._bias_key == key and self._bias_cache is not None:
+            return self._bias_cache
+
+        q_pos = torch.arange(past_len, past_len + q_len, device=device).unsqueeze(1)
+        k_pos = torch.arange(kv_len, device=device).unsqueeze(0)
+        allowed = k_pos <= q_pos
+        if self.is_local:
+            allowed = allowed & ((q_pos - k_pos) < self.local_window)
+
+        bias = torch.zeros((1, 1, q_len, kv_len), device=device, dtype=dtype)
+        bias.masked_fill_(~allowed.view(1, 1, q_len, kv_len), torch.finfo(dtype).min)
+        self._bias_key = key
+        self._bias_cache = bias
+        return bias
+
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -94,32 +127,33 @@ class NHATAttention(nn.Module):
         # attention_mask: expected additive [B,1,Q,K] or None
         dropout_p = self.attention_dropout if self.training else 0.0
 
-        if self.is_local and q_len > self.local_window and past_key_value is None:
-            idx = torch.arange(q_len, device=hidden_states.device)
-            band = (idx[None, :] <= idx[:, None]) & (
-                idx[:, None] - idx[None, :] < self.local_window
-            )
-            local_mask = torch.zeros(
-                (bsz, 1, q_len, q_len), device=hidden_states.device, dtype=query_states.dtype
-            )
-            local_mask = local_mask.masked_fill(~band, torch.finfo(query_states.dtype).min)
-            if attention_mask is not None:
-                local_mask = local_mask + attention_mask
+        kv_len = key_states.shape[2]
+        past_len = kv_len - q_len
+        needs_window = self.is_local and kv_len > self.local_window
+        # `is_causal` only masks correctly when queries and keys are aligned and
+        # nothing else has to be masked; anything past that needs an explicit bias.
+        aligned_prefill = past_len == 0 and attention_mask is None and not needs_window
+
+        if aligned_prefill:
             attn_output = F.scaled_dot_product_attention(
                 query_states,
                 key_states,
                 value_states,
-                attn_mask=local_mask,
                 dropout_p=dropout_p,
+                is_causal=True,
             )
         else:
+            bias = self._causal_bias(
+                q_len, kv_len, past_len, query_states.dtype, hidden_states.device
+            )
+            if attention_mask is not None:
+                bias = bias + attention_mask[..., -kv_len:].to(bias.dtype)
             attn_output = F.scaled_dot_product_attention(
                 query_states,
                 key_states,
                 value_states,
-                attn_mask=attention_mask,
+                attn_mask=bias,
                 dropout_p=dropout_p,
-                is_causal=attention_mask is None,
             )
 
         attn_output = attn_output.transpose(1, 2).contiguous()

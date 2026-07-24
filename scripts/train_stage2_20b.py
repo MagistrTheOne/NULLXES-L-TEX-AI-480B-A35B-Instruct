@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import random
 import sys
 import time
@@ -40,6 +41,14 @@ def main() -> int:
 
     import latex  # noqa: F401
     from latex import LatexConfig, LatexForCausalLM, LatexTokenizer
+    from latex_data.batching import (
+        BASE,
+        MANTRA,
+        SOFT,
+        DocSampler,
+        SequencePacker,
+        mask_labels,
+    )
     from train_stage0a import load_corpus, _is_soft_identity  # reuse Stage0a data plane
 
     cfg_path = ROOT / args.config
@@ -51,6 +60,14 @@ def main() -> int:
         return 2
 
     tok_dir = ROOT / full["tokenizer"]["artifact_dir"]
+    from latex_tokenizer.gate import TokenizerGateError, require_trainable
+
+    try:
+        require_trainable(tok_dir, int(full["tokenizer"].get("vocab_size", 131072)))
+    except TokenizerGateError as e:
+        _log(f"[fail] {e}")
+        return 2
+
     man_rel = train_cfg["corpus_manifest"]
     identity_upsample = int(train_cfg.get("identity_upsample", 1))
     mantra_mix = float(train_cfg.get("mantra_mix", 0.005))
@@ -86,7 +103,8 @@ def main() -> int:
     seq_len = int(train_cfg.get("seq_len", 2048))
     micro = int(train_cfg.get("micro_batch_size", 1))
     accum = int(train_cfg.get("grad_accum_steps", 16))
-    tokens_per_step = seq_len * micro * accum
+    tokens_per_micro = seq_len * micro
+    tokens_per_step = tokens_per_micro * accum
     tokens_target = int(train_cfg["tokens_target"])
     max_steps = max(1, tokens_target // tokens_per_step)
     lr = float(train_cfg["lr"])
@@ -94,11 +112,13 @@ def main() -> int:
     log_every = int(train_cfg.get("log_every", 5))
     clip = float(train_cfg.get("grad_clip", 1.0))
 
+    world = int(os.environ.get("WORLD_SIZE", "1"))
     ds_path = ROOT / train_cfg["deepspeed_config"]
     ds_config = json.loads(ds_path.read_text(encoding="utf-8"))
     ds_config["train_micro_batch_size_per_gpu"] = micro
     ds_config["gradient_accumulation_steps"] = accum
-    ds_config["train_batch_size"] = micro * accum
+    # DeepSpeed requires train_batch_size == micro * gas * data_parallel_world
+    ds_config["train_batch_size"] = micro * accum * world
     ds_config["gradient_clipping"] = clip
 
     opt = AdamW(
@@ -118,33 +138,29 @@ def main() -> int:
 
     out_dir = ROOT / full["checkpoint"]["output_dir"]
     out_dir.mkdir(parents=True, exist_ok=True)
-    rng = random.Random(42)
-    pool = (base + soft) if (base or soft) else list(mantra)
+    rng = random.Random(int(train_cfg.get("seed", 42)))
+    pad_id = tokenizer.pad_token_id or 0
+    sampler = DocSampler(
+        base,
+        soft,
+        mantra,
+        mantra_mix=mantra_mix,
+        soft_mix=soft_id_mix,
+        rng=rng,
+        is_soft=_is_soft_identity,
+    )
+    packer = SequencePacker(
+        sampler,
+        lambda t: tokenizer.encode(t, add_special_tokens=False),
+        seq_len=seq_len,
+        eos_id=tokenizer.eos_token_id or 3,
+        kind_weights={BASE: 1.0, SOFT: id_loss_w, MANTRA: mantra_loss_w},
+    )
 
     def encode_batch() -> tuple:
-        batch_ids = []
-        kinds = []
-        while len(batch_ids) < micro:
-            r = rng.random()
-            if mantra and r < mantra_mix:
-                text, kind = rng.choice(mantra), "mantra"
-            elif soft and r < mantra_mix + soft_id_mix:
-                text, kind = rng.choice(soft), "soft"
-            else:
-                text = rng.choice(pool)
-                kind = "soft" if _is_soft_identity(text) else "base"
-            ids = tokenizer.encode(text, add_special_tokens=False)
-            if len(ids) < 8:
-                continue
-            if len(ids) < seq_len:
-                ids = ids + [0] * (seq_len - len(ids))
-            else:
-                start = rng.randint(0, len(ids) - seq_len)
-                ids = ids[start : start + seq_len]
-            batch_ids.append(ids)
-            kinds.append(kind)
-        t = torch.tensor(batch_ids, dtype=torch.long, device=model_engine.device)
-        return t, kinds
+        rows, weight = packer.batch(micro)
+        t = torch.tensor(rows, dtype=torch.long, device=model_engine.device)
+        return t, weight
 
     def lr_at(step: int) -> float:
         if step < warmup:
@@ -155,32 +171,47 @@ def main() -> int:
 
     t0 = time.time()
     tokens_seen = 0
-    mantra_n = soft_n = 0
     last_loss = 0.0
+    grad_norms: list[float] = []
 
     for step in range(1, max_steps + 1):
         for pg in opt.param_groups:
             pg["lr"] = lr_at(step)
-        ids, kinds = encode_batch()
-        mantra_n += sum(1 for k in kinds if k == "mantra")
-        soft_n += sum(1 for k in kinds if k == "soft")
-        w = mantra_loss_w if "mantra" in kinds else (id_loss_w if "soft" in kinds else 1.0)
-        out = model_engine(input_ids=ids, labels=ids)
-        loss = out.loss * w
-        model_engine.backward(loss)
-        model_engine.step()
-        last_loss = float(loss.detach().float().item())
-        tokens_seen += tokens_per_step
+        # One optimizer step = `accum` micro-batches. DeepSpeed applies the
+        # update only on the accumulation boundary and scales the loss itself.
+        step_loss = 0.0
+        for _ in range(accum):
+            ids, w = encode_batch()
+            labels = mask_labels(ids, pad_id)
+            out = model_engine(input_ids=ids, labels=labels)
+            loss = out.loss * w
+            model_engine.backward(loss)
+            model_engine.step()
+            step_loss += float(loss.detach().float().item())
+            tokens_seen += tokens_per_micro
+        last_loss = step_loss / accum
+        grad_norm = model_engine.get_global_grad_norm()
+        grad_norm = float(grad_norm) if grad_norm is not None else float("nan")
+        if math.isfinite(grad_norm):
+            grad_norms.append(grad_norm)
+
+        if not math.isfinite(last_loss):
+            _log(f"[fail] non-finite loss at step {step}")
+            return 1
 
         if step % log_every == 0 or step == 1 or step == max_steps:
             elapsed = max(1e-6, time.time() - t0)
             tps = tokens_seen / elapsed
+            rates = packer.kind_rates()
             _log(
                 f"step {step}/{max_steps} loss={last_loss:.4f} "
                 f"lr={lr_at(step):.2e} tokens={tokens_seen/1e6:.2f}M "
-                f"tps={tps:.0f} mantra%={100*mantra_n/(step*micro):.1f} "
-                f"soft%={100*soft_n/(step*micro):.1f}"
+                f"tps={tps:.0f} gnorm={grad_norm:.3f} "
+                f"mantra%={100*rates.get(MANTRA, 0.0):.1f} "
+                f"soft%={100*rates.get(SOFT, 0.0):.1f}"
             )
+            if math.isfinite(grad_norm) and grad_norm >= clip * 10:
+                _log(f"[warn] grad_norm {grad_norm:.2f} >= 10x clip — instability ahead")
 
         if step % int(full["checkpoint"].get("save_every_steps", 50)) == 0:
             tag = f"step{step}"
@@ -195,15 +226,22 @@ def main() -> int:
         _log(f"[warn] save_16bit_model failed: {e} — ds checkpoint still on disk")
         model_engine.save_checkpoint(str(out_dir), tag="final")
 
+    ordered = sorted(grad_norms)
     report = {
         "name": train_cfg.get("release_name"),
         "parameters": sum(p.numel() for p in model.parameters()),
         "steps": max_steps,
         "tokens_seen": tokens_seen,
+        "tokens_per_step": tokens_per_step,
         "final_loss": last_loss,
+        "grad_norm_p50": ordered[len(ordered) // 2] if ordered else None,
+        "grad_norm_max": ordered[-1] if ordered else None,
+        "token_rates_by_kind": packer.kind_rates(),
         "checkpoint_dir": str(out_dir.relative_to(ROOT)),
         "resume_from": str(resume.relative_to(ROOT)),
         "deepspeed": str(ds_path.relative_to(ROOT)),
+        "world_size": world,
+        "packing": "documents joined through eos; pad excluded from loss",
         "passed": math.isfinite(last_loss),
     }
     (out_dir / "train_report.json").write_text(

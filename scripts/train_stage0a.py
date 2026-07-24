@@ -27,6 +27,13 @@ def _log(msg: str) -> None:
     print(msg, flush=True)
 
 
+def _p50(values: list[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[len(ordered) // 2]
+
+
 def _is_soft_identity(text: str) -> bool:
     low = text.lower()
     return any(
@@ -127,6 +134,11 @@ def main() -> int:
     p.add_argument("--device", default="cuda")
     p.add_argument("--max-steps", type=int, default=0, help="0 = derive from tokens_target")
     p.add_argument("--resume", default="", help="override training.resume_from")
+    p.add_argument(
+        "--allow-smoke-tokenizer",
+        action="store_true",
+        help="Run against a smoke tokenizer artifact (pipeline test only)",
+    )
     args = p.parse_args()
 
     import torch
@@ -136,6 +148,14 @@ def main() -> int:
     import latex  # noqa: F401
     from latex import LatexConfig, LatexForCausalLM, LatexTokenizer
     from latex.models.init_weights import apply_mup_init
+    from latex_data.batching import (
+        BASE,
+        MANTRA,
+        SOFT,
+        DocSampler,
+        SequencePacker,
+        mask_labels,
+    )
 
     cfg_path = ROOT / args.config
     with cfg_path.open(encoding="utf-8") as f:
@@ -150,6 +170,20 @@ def main() -> int:
     if not (tok_dir / "tokenizer.model").is_file():
         _log("[fail] missing tokenizer — run train_tokenizer.py")
         return 2
+
+    from latex_tokenizer.gate import TokenizerGateError, check_artifact, require_trainable
+
+    expected_vocab = int(full["tokenizer"].get("vocab_size", full["model"]["vocab_size"]))
+    if args.allow_smoke_tokenizer or train_cfg.get("allow_smoke_tokenizer"):
+        gate = check_artifact(tok_dir, expected_vocab)
+        _log(f"[tok-gate] bypassed (smoke allowed) passed={gate['passed']} {gate['errors']}")
+    else:
+        try:
+            require_trainable(tok_dir, expected_vocab)
+        except TokenizerGateError as e:
+            _log(f"[fail] {e}")
+            _log("       pass --allow-smoke-tokenizer only for pipeline smoke runs")
+            return 2
 
     man_rel = train_cfg.get("corpus_manifest", "datasets/manifests/pretrain_stage0.json")
     identity_upsample = int(train_cfg.get("identity_upsample", 4))
@@ -241,38 +275,28 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     rng = random.Random(42)
 
-    pool = base + soft
-    if not pool:
-        pool = mantra[:]
+    pad_id = tokenizer.pad_token_id or 0
+    eos_id = tokenizer.eos_token_id or 3
+    sampler = DocSampler(
+        base,
+        soft,
+        mantra,
+        mantra_mix=mantra_mix,
+        soft_mix=soft_id_mix,
+        rng=rng,
+        is_soft=_is_soft_identity,
+    )
+    packer = SequencePacker(
+        sampler,
+        lambda t: tokenizer.encode(t, add_special_tokens=False),
+        seq_len=seq_len,
+        eos_id=eos_id,
+        kind_weights={BASE: 1.0, SOFT: id_loss_w, MANTRA: mantra_loss_w},
+    )
 
-    def encode_batch() -> tuple[torch.Tensor, list[str]]:
-        batch_ids = []
-        kinds: list[str] = []
-        while len(batch_ids) < micro:
-            # re-pick with proper kind tagging
-            r = rng.random()
-            if mantra and r < mantra_mix:
-                text, kind = rng.choice(mantra), "mantra"
-            elif soft and r < mantra_mix + soft_id_mix:
-                text, kind = rng.choice(soft), "soft"
-            else:
-                text = rng.choice(pool)
-                kind = "soft" if _is_soft_identity(text) else "base"
-            ids = tokenizer.encode(text, add_special_tokens=False)
-            if len(ids) < 8:
-                continue
-            if len(ids) < seq_len:
-                ids = ids + [tokenizer.pad_token_id or 0] * (seq_len - len(ids))
-            else:
-                # for short mantras prefer start; for long docs random crop
-                if kind == "mantra" or len(ids) <= seq_len:
-                    ids = ids[:seq_len]
-                else:
-                    start = rng.randint(0, max(0, len(ids) - seq_len))
-                    ids = ids[start : start + seq_len]
-            batch_ids.append(ids[:seq_len])
-            kinds.append(kind)
-        return torch.tensor(batch_ids, dtype=torch.long, device=device), kinds
+    def encode_batch() -> tuple[torch.Tensor, float]:
+        rows, weight = packer.batch(micro)
+        return torch.tensor(rows, dtype=torch.long, device=device), weight
 
     def lr_at(step: int) -> float:
         if step < warmup:
@@ -283,18 +307,6 @@ def main() -> int:
         t = (step - decay_start) / max(1, max_steps - decay_start)
         return lr * (1.0 - 0.9 * t)
 
-    def kind_weight(kinds: list[str]) -> float:
-        # micro_batch usually 1; average if >1
-        ws = []
-        for k in kinds:
-            if k == "mantra":
-                ws.append(mantra_loss_w)
-            elif k == "soft":
-                ws.append(id_loss_w)
-            else:
-                ws.append(1.0)
-        return sum(ws) / max(len(ws), 1)
-
     _log(
         f"[train] steps={max_steps} tokens/step≈{tokens_per_step} "
         f"target≈{max_steps * tokens_per_step / 1e6:.1f}M tokens"
@@ -303,22 +315,17 @@ def main() -> int:
     tokens_seen = 0
     opt.zero_grad(set_to_none=True)
     last_loss = None
-    mantra_hits = 0
-    soft_hits = 0
-    micro_total = 0
+    grad_norms: list[float] = []
 
     for step in range(1, max_steps + 1):
         for g in opt.param_groups:
             g["lr"] = lr_at(step)
         loss_acc = 0.0
         for _ in range(accum):
-            input_ids, kinds = encode_batch()
-            micro_total += len(kinds)
-            mantra_hits += sum(1 for k in kinds if k == "mantra")
-            soft_hits += sum(1 for k in kinds if k == "soft")
-            w = kind_weight(kinds)
+            input_ids, w = encode_batch()
+            labels = mask_labels(input_ids, pad_id)
             with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=use_amp):
-                out = model(input_ids=input_ids, labels=input_ids)
+                out = model(input_ids=input_ids, labels=labels)
                 loss = (out.loss * w) / accum
             if not torch.isfinite(loss):
                 _log(f"[fail] non-finite loss at step {step}")
@@ -330,7 +337,8 @@ def main() -> int:
             loss_acc += float(loss.detach().item()) * accum
         if use_amp:
             scaler.unscale_(opt)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
+        grad_norm = float(torch.nn.utils.clip_grad_norm_(model.parameters(), clip))
+        grad_norms.append(grad_norm)
         if use_amp:
             scaler.step(opt)
             scaler.update()
@@ -343,13 +351,15 @@ def main() -> int:
         if step % log_every == 0 or step == 1 or step == max_steps:
             elapsed = time.time() - t0
             tps = tokens_seen / max(elapsed, 1e-6)
-            m_rate = mantra_hits / max(micro_total, 1)
-            s_rate = soft_hits / max(micro_total, 1)
+            rates = packer.kind_rates()
             _log(
                 f"step {step}/{max_steps} loss={last_loss:.4f} "
                 f"lr={lr_at(step):.2e} tokens={tokens_seen/1e6:.2f}M tps={tps:.0f} "
-                f"mantra%={100*m_rate:.1f} soft%={100*s_rate:.1f}"
+                f"gnorm={grad_norm:.3f} "
+                f"mantra%={100*rates.get(MANTRA, 0.0):.1f} soft%={100*rates.get(SOFT, 0.0):.1f}"
             )
+            if grad_norm >= clip * 10:
+                _log(f"[warn] grad_norm {grad_norm:.2f} >= 10x clip — instability ahead")
 
         if step % int(full["checkpoint"].get("save_every_steps", 200)) == 0:
             model.save_pretrained(out_dir, safe_serialization=True)
@@ -377,7 +387,10 @@ def main() -> int:
         "mantra_mix": mantra_mix,
         "mantra_loss_weight": mantra_loss_w,
         "identity_loss_weight": id_loss_w,
-        "mantra_rate_observed": mantra_hits / max(micro_total, 1),
+        "token_rates_by_kind": packer.kind_rates(),
+        "grad_norm_p50": _p50(grad_norms),
+        "grad_norm_max": max(grad_norms) if grad_norms else None,
+        "packing": "documents joined through eos; pad excluded from loss",
         "identity_note": "Hard mantra Q/A + soft identity + loss weighting",
         "passed": last_loss is not None and math.isfinite(last_loss),
     }
