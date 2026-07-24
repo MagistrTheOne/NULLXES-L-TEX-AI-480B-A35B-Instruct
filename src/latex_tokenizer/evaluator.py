@@ -11,6 +11,7 @@ from typing import Any
 from latex_tokenizer.fertility import (
     evaluate_fertility_file,
     evaluate_fragmentation,
+    is_char_shredded,
     load_samples,
 )
 from latex_tokenizer.normalize import preserves_math_code_hints
@@ -55,6 +56,68 @@ def check_determinism(sp, text: str, rounds: int = 5) -> bool:
         if _encode(sp, text) != first:
             return False
     return True
+
+
+DEFAULT_CONCEPTS = ["NULLXES", "LÆTEX", "FOUNDATION", "MODEL", "NULLXES-LÆTEX"]
+
+
+def check_concept_regression(cfg: dict[str, Any], sp, *, smoke: bool) -> dict[str, Any]:
+    """Concepts and slot tokens must survive tokenization intact.
+
+    Separate from fertility on purpose: a tokenizer can hit every chars-per-token
+    band and still shred `<|tool_call|>` into punctuation, which silently breaks
+    every structured sample in the corpus.
+    """
+    section = cfg.get("concept_regression") or {}
+    concepts = section.get("concepts") or DEFAULT_CONCEPTS
+    specials = {
+        meta["token"]: int(meta["id"])
+        for meta in (cfg.get("special_tokens") or {}).values()
+        if isinstance(meta, dict) and int(meta.get("id", -1)) >= 4
+    }
+
+    special_results = []
+    specials_ok = True
+    for token, expected_id in sorted(specials.items(), key=lambda kv: kv[1]):
+        ids = _encode(sp, token)
+        ok = len(ids) == 1 and ids[0] == expected_id
+        specials_ok = specials_ok and ok
+        special_results.append(
+            {"token": token, "expected_id": expected_id, "ids": ids, "passed": ok}
+        )
+
+    concept_results = []
+    concepts_ok = True
+    roundtrip_ok = True
+    for text in concepts:
+        pieces = _pieces(sp, text)
+        shredded = is_char_shredded(text, pieces)
+        restored = _decode(sp, _encode(sp, text)).strip()
+        exact = restored == text
+        concepts_ok = concepts_ok and not shredded
+        roundtrip_ok = roundtrip_ok and exact
+        concept_results.append(
+            {
+                "text": text,
+                "pieces": pieces,
+                "char_shredded": shredded,
+                "roundtrip_exact": exact,
+                "decoded": restored,
+            }
+        )
+
+    # A smoke vocab legitimately cannot hold brand words as single pieces, but it
+    # has no excuse for losing user-defined slot tokens or breaking roundtrip.
+    passed = specials_ok and roundtrip_ok and (concepts_ok or smoke)
+    return {
+        "passed": passed,
+        "specials_atomic": specials_ok,
+        "concepts_not_shredded": concepts_ok,
+        "roundtrip_exact": roundtrip_ok,
+        "concepts_enforced": not smoke,
+        "specials": special_results,
+        "concepts": concept_results,
+    }
 
 
 def run_gate0_eval(cfg: dict[str, Any], *, smoke: bool = False) -> dict[str, Any]:
@@ -104,6 +167,9 @@ def run_gate0_eval(cfg: dict[str, Any], *, smoke: bool = False) -> dict[str, Any
         if not fr.passed:
             frag_pass = False
     report["checks"]["fragmentation"] = {"passed": frag_pass, "items": frag_results}
+
+    # Concept regression — blocking, independent of fertility
+    report["checks"]["concept_regression"] = check_concept_regression(cfg, sp, smoke=smoke)
 
     # Reconstruction by domain
     recon_pass = True
@@ -175,15 +241,18 @@ def run_gate0_eval(cfg: dict[str, Any], *, smoke: bool = False) -> dict[str, Any
         "unicode_preserve",
         "fertility",
         "fragmentation",
+        "concept_regression",
         "reconstruction",
         "versioned_artifacts",
         "vocab_size",
     ]
-    # On smoke or padded bootstrap vocab: fertility soft until corpus grows
+    # On smoke or padded bootstrap vocab: fertility soft until corpus grows.
+    # concept_regression stays critical — it self-relaxes for smoke internally.
     if smoke or bool(meta.get("vocab_padded")):
         critical = [
             "special_tokens",
             "determinism",
+            "concept_regression",
             "reconstruction",
             "versioned_artifacts",
             "vocab_size",
